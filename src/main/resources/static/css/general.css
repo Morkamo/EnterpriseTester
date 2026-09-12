@@ -1,0 +1,11 @@
+:root {
+    --background-color: #fff;
+    --button-color-base: #006DD9;
+    --button-color-negative: #B50000;
+    --label-error-color: #F00;
+    --label-success-color: #0ba800;
+}
+
+body {
+    background-color: var(--background-color);
+}

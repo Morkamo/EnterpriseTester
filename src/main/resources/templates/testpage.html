@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${attempt.testName}">Прохождение теста</title>
+    <link rel="stylesheet" href="/css/general.css">
+    <link rel="stylesheet" href="/css/mainpage.css">
+    <link rel="stylesheet" href="/css/testpage.css">
+</head>
+<body class="main-page">
+<form id="testForm" method="post" th:action="@{/attempts/{id}/navigate(id=${attempt.id})}"
+      th:attr="data-answer-url=@{/attempts/{id}/answer(id=${attempt.id})},
+               data-result-url=@{/attempts/{id}/result(id=${attempt.id})},
+               data-deadline=${deadline},data-server-now=${serverNow}">
+    <input type="hidden" name="questionIndex" th:value="${attempt.currentQuestion}">
+    <header class="main-header test-header">
+        <button class="profile-button" name="target" th:value="${attempt.currentQuestion - 1}"
+                th:disabled="${attempt.currentQuestion == 0}">Назад</button>
+        <h1 th:text="${attempt.testName}">Название теста</h1>
+        <button class="profile-button" name="target" th:value="${attempt.currentQuestion + 1}"
+                th:if="${attempt.currentQuestion + 1 < attempt.questions.size()}">Вперёд</button>
+        <button class="profile-button" name="complete" value="true"
+                th:if="${attempt.currentQuestion + 1 == attempt.questions.size()}">Завершить</button>
+    </header>
+    <main class="main-content question-content">
+        <h2 th:text="|Вопрос ${attempt.currentQuestion + 1}|">Вопрос 1</h2>
+        <p class="question-text" th:text="${question.text}">Текст вопроса</p>
+        <p class="question-hint" th:text="${question.multiple ? 'Выберите один или несколько вариантов.' : 'Выберите один вариант.'}"></p>
+        <div class="answer-options">
+            <label class="answer-option" th:each="option : ${question.options}">
+                <input name="selected" th:type="${question.multiple ? 'checkbox' : 'radio'}"
+                       th:value="${option.id}" th:checked="${option.selected}">
+                <span th:text="${option.text}">Вариант ответа</span>
+            </label>
+        </div>
+        <p id="saveStatus" role="status"></p>
+        <p th:if="${deadline != null && attempt.showCountdown}" id="countdown"></p>
+        <p th:text="|Вопрос ${attempt.currentQuestion + 1} из ${attempt.questions.size()}|"></p>
+        <nav class="question-navigation" aria-label="Переход к вопросу">
+            <button th:each="item, index : ${attempt.questions}" name="target" th:value="${index.index}"
+                    th:text="${index.count}" th:classappend="${index.index == attempt.currentQuestion ? 'current' : ''}"
+                    th:attr="aria-current=${index.index == attempt.currentQuestion ? 'step' : null}"></button>
+        </nav>
+    </main>
+    <button id="timeoutFinish" name="complete" value="true" hidden>Завершить</button>
+</form>
+<script src="/js/testpage.js"></script>
+</body>
+</html>

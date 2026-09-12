@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Результат теста</title>
+    <link rel="stylesheet" href="/css/general.css">
+    <link rel="stylesheet" href="/css/mainpage.css">
+    <link rel="stylesheet" href="/css/testResult.css">
+</head>
+<body class="main-page">
+<header class="main-header result-header">
+    <h1 th:text="${attempt.testName}">Название теста</h1>
+</header>
+<main class="main-content result-content">
+    <h2>Тест завершён</h2>
+    <p th:text="|Всего вопросов: ${attempt.questions.size()}|"></p>
+    <p th:text="|Верно отвечено: ${attempt.correctCount}|"></p>
+    <p th:text="|Результат: ${attempt.percentage}%|"></p>
+    <p th:if="${attempt.answerMode != 'NONE'}"
+       th:text="|Процент рассчитан в режиме ${attempt.answerMode}. Количество верных — только полностью правильные ответы.|"></p>
+    <a href="/mainpage">На главную</a>
+</main>
+</body>
+</html>

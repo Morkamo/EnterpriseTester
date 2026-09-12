@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${test.name}">Обложка теста</title>
+    <link rel="stylesheet" href="/css/general.css">
+    <link rel="stylesheet" href="/css/authpage.css">
+    <link rel="stylesheet" href="/css/testcover.css">
+</head>
+<body class="auth-page">
+<main class="auth-modal-body test-cover">
+    <h1 id="textHeader" class="auth-title" th:text="${test.name}">Название теста</h1>
+    <p id="textDescription" th:text="${test.description}">Описание теста</p>
+    <p class="test-time" th:if="${time != null}" th:text="|Время для прохождения: ${time} минут.|"></p>
+    <form th:action="@{/tests/{id}/start(id=${test.id})}" method="post">
+        <button id="startTest" class="auth-button">Начать тест</button>
+    </form>
+    <a class="back-link" href="/mainpage">На главную</a>
+</main>
+</body>
+</html>

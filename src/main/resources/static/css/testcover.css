@@ -1,0 +1,23 @@
+.test-cover {
+    width: 468px;
+    max-width: calc(100% - 72px);
+}
+
+.test-cover h1,
+.test-cover p {
+    margin: 0;
+}
+
+#textDescription {
+    line-height: 1.5;
+    white-space: pre-line;
+}
+
+.test-time,
+.back-link {
+    text-align: center;
+}
+
+.back-link {
+    color: var(--button-color-base);
+}

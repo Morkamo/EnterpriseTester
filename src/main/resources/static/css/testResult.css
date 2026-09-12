@@ -1,0 +1,17 @@
+.result-header {
+    justify-content: center;
+}
+
+.result-header h1 {
+    margin: 0;
+    font-size: 24px;
+    text-align: center;
+}
+
+.result-content {
+    text-align: center;
+}
+
+.result-content a {
+    color: var(--button-color-base);
+}

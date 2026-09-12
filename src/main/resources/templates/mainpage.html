@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Главная</title>
+    <link rel="stylesheet" href="/css/general.css">
+    <link rel="stylesheet" href="/css/mainpage.css">
+</head>
+<body class="main-page">
+
+<header class="main-header">
+    <span class="user-name" th:text="${fullName}">Имя Фамилия</span>
+    <button class="profile-button" onclick="alert('Профиль пока в разработке')">Профиль</button>
+</header>
+
+<main class="main-content">
+    <h1>Тесты</h1>
+    <div class="tests-container">
+        <a class="test-card" th:each="test : ${tests}" th:href="@{/tests/{id}(id=${test.id})}">
+            <h2 th:text="${test.name}">Название теста</h2>
+            <p th:text="${test.description}">Описание теста</p>
+        </a>
+        <p th:if="${tests.isEmpty()}">Пока нет доступных тестов.</p>
+    </div>
+</main>
+
+</body>
+</html>
