@@ -14,4 +14,8 @@ public class Answer {
     private String text;
     @Column(name = "is_correct_answer")
     private boolean correct;
+    private int points;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "question_id", nullable = false)
+    private Question question;
 }

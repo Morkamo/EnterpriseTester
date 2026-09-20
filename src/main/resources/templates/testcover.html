@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title th:text="${test.name}">Обложка теста</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="/css/general.css">
     <link rel="stylesheet" href="/css/authpage.css">
     <link rel="stylesheet" href="/css/testcover.css">
@@ -14,7 +17,8 @@
     <p id="textDescription" th:text="${test.description}">Описание теста</p>
     <p class="test-time" th:if="${time != null}" th:text="|Время для прохождения: ${time} минут.|"></p>
     <form th:action="@{/tests/{id}/start(id=${test.id})}" method="post">
-        <button id="startTest" class="auth-button">Начать тест</button>
+        <button id="startTest" class="auth-button"
+                th:text="${activeAttempt == null ? 'Начать тест' : 'Продолжить тест'}">Начать тест</button>
     </form>
     <a class="back-link" href="/mainpage">На главную</a>
 </main>

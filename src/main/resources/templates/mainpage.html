@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Главная</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="/css/general.css">
     <link rel="stylesheet" href="/css/mainpage.css">
 </head>
@@ -11,10 +14,14 @@
 
 <header class="main-header">
     <span class="user-name" th:text="${fullName}">Имя Фамилия</span>
-    <button class="profile-button" onclick="alert('Профиль пока в разработке')">Профиль</button>
+    <div class="header-actions">
+        <a class="management-button" th:if="${canManage}" href="/management">Управление</a>
+        <a class="profile-button" href="/profile">Профиль</a>
+    </div>
 </header>
 
 <main class="main-content">
+    <p class="error-message" th:if="${param.error != null}">Тест недоступен или уже завершён.</p>
     <h1>Тесты</h1>
     <div class="tests-container">
         <a class="test-card" th:each="test : ${tests}" th:href="@{/tests/{id}(id=${test.id})}">

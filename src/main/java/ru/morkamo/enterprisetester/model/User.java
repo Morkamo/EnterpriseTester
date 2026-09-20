@@ -22,6 +22,7 @@ public class User {
     private String password;
     @Column(name = "user_role_id")
     private Long userRole;
+    private boolean deleted;
 
     public User(String firstName, String lastName, String email, String password, Long userRole) {
         this.firstName = firstName;

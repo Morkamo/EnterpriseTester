@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Вопрос</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"><link rel="stylesheet" href="/css/general.css?v=5"><link rel="stylesheet" href="/css/mainpage.css"><link rel="stylesheet" href="/css/management.css?v=7"></head>
+<body class="main-page">
+<header class="main-header"><span class="user-name">Вопрос</span><a class="profile-button" href="/management?section=questions">Назад</a></header>
+<main class="main-content narrow-content">
+ <p class="error-message" th:if="${error}" th:text="${error}"></p>
+ <form class="simple-form" th:action="@{/management/questions/save}" method="post" enctype="multipart/form-data">
+  <input th:if="${question != null}" type="hidden" name="id" th:value="${question.id}">
+  <label>Текст вопроса<textarea name="text" required th:text="${question?.text}"></textarea></label>
+  <p>Изображения (до 10 PNG/JPEG, до 10 МБ каждое)</p>
+  <button id="addImage" type="button" class="profile-button">Добавить изображение</button>
+  <p id="imageError" class="error-message" role="alert" hidden></p>
+  <div id="imageCards" class="question-images image-editor">
+   <div class="image-card" th:each="imageName, imageIndex : ${question?.imageNames}" th:attr="data-image-index=${imageIndex.index}">
+    <img class="question-image" th:src="@{/management/questions/{id}/images/{imageIndex}(id=${question.id},imageIndex=${imageIndex.index})}" alt="Изображение вопроса">
+    <button type="button" class="remove-button remove-image">Удалить</button>
+   </div>
+  </div>
+  <h2>Варианты ответа</h2>
+  <div id="answerRows">
+   <div class="answer-row" th:each="answer : ${question?.answers}">
+    <input name="answerText" placeholder="Вариант ответа" th:value="${answer.text}" required>
+    <input name="points" type="number" min="0" th:value="${answer.points}" required>
+    <button type="button" class="remove-button" onclick="this.parentElement.remove()">−</button>
+   </div>
+  </div>
+  <button type="button" class="profile-button" onclick="addAnswer()">+ Добавить вариант</button>
+  <label class="checkbox-line"><input type="checkbox" name="multiple" value="true"
+                                      th:checked="${question?.multipleAllowed}"> Допускается множественный выбор</label>
+  <button class="profile-button">Сохранить вопрос</button>
+ </form>
+</main>
+<script src="/js/questionForm.js?v=3"></script>
+</body>
+</html>

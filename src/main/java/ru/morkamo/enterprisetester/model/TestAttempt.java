@@ -22,6 +22,7 @@ public class TestAttempt {
     private int currentQuestion;
     private int correctCount;
     private double score;
+    private double maxScore;
     private double percentage;
     private String answerMode;
     private boolean showCountdown;

@@ -9,6 +9,10 @@ async function saveAnswer(data) {
         body: data
     });
     if (!response.ok) {
+        if (response.status === 409) {
+            window.location.href = '/mainpage?error=testClosed';
+            return;
+        }
         throw new Error('Не удалось сохранить ответ. Нажмите «Назад» или «Вперёд», чтобы повторить сохранение.');
     }
     if (await response.json()) {
@@ -30,7 +34,6 @@ form.addEventListener('submit', async event => {
     navigating = true;
     form.inert = true;
     const button = event.submitter;
-    // Wait for autosave so an older request cannot overwrite the latest answer.
     await pendingSave;
     const action = document.createElement('input');
     action.type = 'hidden';

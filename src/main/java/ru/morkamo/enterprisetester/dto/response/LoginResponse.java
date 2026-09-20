@@ -4,9 +4,10 @@ public record LoginResponse(
         boolean success,
         String message,
         String fullName,
-        Long userId
+        Long userId,
+        Long roleId
 ) {
     public LoginResponse(boolean success, String message) {
-        this(success, message, null, null);
+        this(success, message, null, null, null);
     }
 }

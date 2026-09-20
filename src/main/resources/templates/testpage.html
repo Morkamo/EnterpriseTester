@@ -4,7 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title th:text="${attempt.testName}">Прохождение теста</title>
-    <link rel="stylesheet" href="/css/general.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="/css/general.css?v=5">
     <link rel="stylesheet" href="/css/mainpage.css">
     <link rel="stylesheet" href="/css/testpage.css">
 </head>
@@ -26,6 +29,11 @@
     <main class="main-content question-content">
         <h2 th:text="|Вопрос ${attempt.currentQuestion + 1}|">Вопрос 1</h2>
         <p class="question-text" th:text="${question.text}">Текст вопроса</p>
+        <div class="question-images">
+            <img class="question-image" th:each="imageName, imageIndex : ${question.imageNames}"
+                 th:src="@{/attempts/{id}/questions/{index}/images/{imageIndex}(id=${attempt.id},index=${attempt.currentQuestion},imageIndex=${imageIndex.index})}"
+                 alt="Изображение вопроса">
+        </div>
         <p class="question-hint" th:text="${question.multiple ? 'Выберите один или несколько вариантов.' : 'Выберите один вариант.'}"></p>
         <div class="answer-options">
             <label class="answer-option" th:each="option : ${question.options}">

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Профиль</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="/css/general.css">
+    <link rel="stylesheet" href="/css/mainpage.css">
+    <link rel="stylesheet" href="/css/profile.css">
+</head>
+<body class="main-page">
+<header class="main-header">
+    <span class="user-name" th:text="${fullName}">Имя Фамилия</span>
+    <div class="header-actions">
+        <a class="management-button" th:if="${canManage}" href="/management">Управление</a>
+        <a class="profile-button" href="/mainpage">Главная</a>
+    </div>
+</header>
+<main class="main-content profile-content">
+    <h1>Профиль</h1>
+    <h2>История тестов</h2>
+    <div class="tests-container">
+        <article class="test-card" th:each="attempt : ${history}">
+            <h3 th:text="${attempt.testName}">Тест</h3>
+            <p th:text="|Баллы: ${attempt.score} из ${attempt.maxScore}|"></p>
+            <p th:text="|Результат: ${attempt.percentage}%|"></p>
+            <a th:href="@{/attempts/{id}/result(id=${attempt.id})}">Посмотреть результат</a>
+        </article>
+        <p th:if="${history.isEmpty()}">Вы ещё не проходили тесты.</p>
+    </div>
+    <form th:action="@{/logout}" method="post">
+        <button class="logout-button">Выйти из аккаунта</button>
+    </form>
+</main>
+</body>
+</html>

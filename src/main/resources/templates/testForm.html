@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Создание теста</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"><link rel="stylesheet" href="/css/general.css?v=4"><link rel="stylesheet" href="/css/mainpage.css"><link rel="stylesheet" href="/css/management.css?v=4"></head>
+<body class="main-page">
+<header class="main-header"><span class="user-name">Новый тест</span><a class="profile-button" href="/management">Назад</a></header>
+<main class="main-content">
+ <p class="error-message" th:if="${error}" th:text="${error}"></p>
+ <form id="testCreateForm" class="simple-form" th:action="@{/management/tests/create}" method="post"
+       th:attr="data-minimum-questions=${defaultQuestionsCount}">
+  <label>Название<input name="name" required></label>
+  <label>Описание<textarea name="description" required></textarea></label>
+  <div class="checkbox-list-header">
+   <h2>Вопросы</h2>
+   <span th:text="|Минимум: ${defaultQuestionsCount}|">Минимум: 20</span>
+  </div>
+  <div id="questionRows"></div>
+  <template id="questionRowTemplate">
+   <div class="question-select-row">
+    <select name="questionIds" required>
+     <option value="" selected disabled>Выберите вопрос</option>
+     <option th:each="question : ${questions}" th:value="${question.id}" th:text="${question.text}"></option>
+    </select>
+    <button type="button" class="remove-button">−</button>
+   </div>
+  </template>
+  <button id="addQuestion" th:if="${!questions.isEmpty()}" type="button" class="profile-button">+ Добавить вопрос</button>
+  <p class="empty-list-message" th:if="${questions.isEmpty()}">Нет доступных вопросов. <a href="/management/questions/new">Создать вопрос</a></p>
+  <p id="questionCountError" class="error-message" hidden></p>
+  <label th:if="${timeLimitEnabled}" class="checkbox-line"><input id="timed" type="checkbox" name="timed" value="true"> Лимит времени на прохождение</label>
+  <label th:if="${timeLimitEnabled}" id="timeField" hidden>Время в минутах
+   <input name="minutes" type="text" inputmode="numeric" pattern="[0-9]+" maxlength="7"
+          autocomplete="off" placeholder="От 1 до 1000000">
+  </label>
+  <h2>Назначить пользователям</h2>
+  <div class="checkbox-list">
+   <label class="checkbox-item" th:each="user : ${users}">
+    <span th:text="|${user.lastName} ${user.firstName} (${user.email})|"></span>
+    <input type="checkbox" name="userIds" th:value="${user.id}">
+   </label>
+  </div>
+  <button class="profile-button">Создать тест</button>
+ </form>
+</main>
+<script src="/js/testForm.js?v=5"></script>
+</body>
+</html>

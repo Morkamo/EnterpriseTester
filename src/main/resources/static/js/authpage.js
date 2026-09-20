@@ -17,11 +17,13 @@ async function login() {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
 
+    const csrf = await fetch('/api/auth/csrf').then(response => response.json());
     const response = await fetch("/api/auth/login", {
         method: "POST",
 
         headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "X-CSRF-TOKEN": csrf.token
         },
 
         body: JSON.stringify({

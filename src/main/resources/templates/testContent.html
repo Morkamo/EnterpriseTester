@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Содержание теста</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="/css/general.css?v=5">
+    <link rel="stylesheet" href="/css/mainpage.css">
+    <link rel="stylesheet" href="/css/management.css?v=4">
+</head>
+<body class="main-page management-page">
+<header class="main-header">
+    <span class="user-name" th:text="${test.name}">Содержание теста</span>
+    <a class="profile-button" href="/management">Назад</a>
+</header>
+<main class="main-content">
+    <h1>Содержание теста</h1>
+    <div class="test-content-scroll">
+        <article class="test-content-question" th:each="question, index : ${test.questions}">
+            <h2 th:text="|Вопрос ${index.count}|"></h2>
+            <p class="content-question-text" th:text="${question.text}"></p>
+            <div class="question-images">
+                <img class="question-image" th:each="imageName, imageIndex : ${question.imageNames}"
+                     th:src="@{/management/questions/{id}/images/{imageIndex}(id=${question.id},imageIndex=${imageIndex.index})}" alt="Изображение вопроса">
+            </div>
+            <div class="content-answer-list">
+                <div class="content-answer" th:each="answer : ${question.answers}"
+                     th:classappend="${answer.correct ? 'correct-answer' : ''}">
+                    <span th:text="${answer.text}"></span>
+                    <span class="answer-points" th:text="|${answer.points} балл(ов)|"></span>
+                </div>
+            </div>
+        </article>
+    </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Статистика</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"><link rel="stylesheet" href="/css/general.css?v=4"><link rel="stylesheet" href="/css/mainpage.css"><link rel="stylesheet" href="/css/management.css?v=5"></head>
+<body class="main-page">
+<header class="main-header"><span class="user-name" th:text="${test.name}">Статистика</span><a class="profile-button" href="/management">Назад</a></header>
+<main class="main-content">
+ <div class="section-title">
+  <h1>Статистика</h1>
+  <button class="profile-button" type="button" onclick="document.getElementById('exportDialog').showModal()">Выгрузить</button>
+ </div>
+ <div class="management-list">
+  <a class="management-item statistic-link" th:each="attempt : ${attempts}" th:href="@{/management/tests/{testId}/statistics/{attemptId}(testId=${test.id},attemptId=${attempt.id})}">
+   <span th:text="${userNames.get(attempt.userId) ?: 'Удалённый пользователь'}"></span>
+   <span th:text="|${attempt.score} из ${attempt.maxScore} баллов|"></span>
+   <span th:text="|${attempt.percentage}%|"></span>
+  </a>
+  <p th:if="${attempts.isEmpty()}">Нет завершённых попыток.</p>
+ </div>
+</main>
+<dialog class="export-dialog" id="exportDialog">
+ <h2>Формат выгрузки</h2>
+ <div class="export-options">
+  <a class="profile-button" th:href="@{/management/tests/{id}/statistics/export(id=${test.id},format='csv')}" onclick="document.getElementById('exportDialog').close()">CSV</a>
+  <a class="profile-button" th:href="@{/management/tests/{id}/statistics/export(id=${test.id},format='xlsx')}" onclick="document.getElementById('exportDialog').close()">Excel</a>
+ </div>
+ <button class="negative-button export-close" type="button" onclick="document.getElementById('exportDialog').close()">Закрыть</button>
+</dialog>
+</body>
+</html>

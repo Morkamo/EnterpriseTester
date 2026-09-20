@@ -1,0 +1,22 @@
+.profile-content {
+    width: 420px;
+    max-width: calc(100% - 48px);
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.profile-content h1,
+.profile-content h2 {
+    text-align: center;
+}
+
+.logout-button {
+    width: 100%;
+    margin-top: 20px;
+    padding: 10px;
+    border: none;
+    border-radius: 6px;
+    background-color: var(--button-color-negative);
+    color: white;
+    cursor: pointer;
+}

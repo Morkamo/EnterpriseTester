@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Управление</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="/css/general.css?v=4">
+    <link rel="stylesheet" href="/css/mainpage.css">
+    <link rel="stylesheet" href="/css/management.css?v=4">
+</head>
+<body class="main-page management-page">
+<header class="main-header">
+    <span class="user-name" th:text="|Управление (${roleName})|">Управление</span>
+    <div class="header-actions">
+        <a class="profile-button" href="/mainpage">Главная</a>
+        <a class="profile-button" href="/profile">Профиль</a>
+    </div>
+</header>
+
+<main class="main-content">
+    <nav class="management-tabs">
+        <a href="/management?section=tests" th:classappend="${section == 'tests' ? 'active' : ''}">Тесты</a>
+        <a href="/management?section=questions" th:classappend="${section == 'questions' ? 'active' : ''}">Вопросы</a>
+        <a th:if="${isAdmin}" href="/management?section=users"
+           th:classappend="${section == 'users' ? 'active' : ''}">Пользователи</a>
+    </nav>
+
+    <p class="error-message" th:if="${error}" th:text="${error}"></p>
+
+    <section th:if="${section == 'tests'}">
+        <div class="section-title">
+            <h1>Тесты</h1>
+            <a class="profile-button" href="/management/tests/new">Создать тест</a>
+        </div>
+
+        <h2>Активные</h2>
+        <div class="management-list">
+            <article class="management-item" th:each="test : ${tests}" th:if="${!test.testClosed}">
+                <div>
+                    <strong th:text="${test.name}"></strong>
+                    <p th:text="${test.description}"></p>
+                </div>
+                <div class="item-actions">
+                    <a class="profile-button" th:if="${isAdmin}"
+                       th:href="@{/management/tests/{id}/content(id=${test.id})}">Содержание</a>
+                    <form th:action="@{/management/tests/{id}/close(id=${test.id})}" method="post"
+                          onsubmit="return confirm('Завершить этот тест?')">
+                        <button class="negative-button">Завершить</button>
+                    </form>
+                </div>
+            </article>
+            <p th:if="${tests.?[!testClosed].isEmpty()}">У вас нет активных тестов.</p>
+        </div>
+
+        <h2>Завершённые</h2>
+        <div class="management-list">
+            <article class="management-item" th:each="test : ${tests}" th:if="${test.testClosed}">
+                <strong th:text="${test.name}"></strong>
+                <div class="item-actions">
+                    <a class="profile-button" th:if="${isAdmin}"
+                       th:href="@{/management/tests/{id}/content(id=${test.id})}">Содержание</a>
+                    <a class="profile-button" th:href="@{/management/tests/{id}/statistics(id=${test.id})}">Статистика</a>
+                </div>
+            </article>
+            <p th:if="${tests.?[testClosed].isEmpty()}">У вас нет завершённых тестов.</p>
+        </div>
+    </section>
+
+    <section th:if="${section == 'questions'}">
+        <div class="section-title">
+            <h1>Вопросы</h1>
+            <a class="profile-button" href="/management/questions/new">Создать вопрос</a>
+        </div>
+
+        <div class="management-list">
+            <article class="management-item" th:each="question : ${questions}">
+                <span th:text="${question.text}"></span>
+                <div class="item-actions">
+                    <a class="profile-button" th:href="@{/management/questions/{id}(id=${question.id})}">Изменить</a>
+                    <form th:action="@{/management/questions/{id}/delete(id=${question.id})}" method="post"
+                          onsubmit="return confirm('Удалить вопрос?')">
+                        <button class="negative-button">Удалить</button>
+                    </form>
+                </div>
+            </article>
+            <p class="empty-list-message" th:if="${questions.isEmpty()}">У вас нет созданных вопросов.</p>
+        </div>
+    </section>
+
+    <section th:if="${section == 'users' && isAdmin}">
+        <h1>Пользователи</h1>
+
+        <form class="simple-form" th:action="@{/management/users/save}" method="post">
+            <h2>Добавить пользователя</h2>
+            <input name="firstName" placeholder="Имя" required>
+            <input name="lastName" placeholder="Фамилия" required>
+            <input name="email" type="email" placeholder="Email" required>
+            <input name="password" type="password" placeholder="Пароль" autocomplete="new-password" required>
+            <select name="roleId">
+                <option value="1">Пользователь</option>
+                <option value="3">Менеджер</option>
+                <option value="2">Администратор</option>
+            </select>
+            <button class="profile-button">Добавить</button>
+        </form>
+
+        <div class="user-filters" aria-label="Фильтры пользователей">
+            <label>Имя
+                <input type="search" data-user-filter="firstName" placeholder="Поиск по имени">
+            </label>
+            <label>Фамилия
+                <input type="search" data-user-filter="lastName" placeholder="Поиск по фамилии">
+            </label>
+            <label>Email
+                <input type="search" data-user-filter="email" placeholder="Поиск по email">
+            </label>
+            <label>Роль
+                <select data-user-filter="role">
+                    <option value="">Все роли</option>
+                    <option value="Пользователь">Пользователь</option>
+                    <option value="Менеджер">Менеджер</option>
+                    <option value="Администратор">Администратор</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="management-list users-list">
+            <form class="management-item user-form" data-user-row th:each="user : ${users}"
+                  th:action="@{/management/users/save}" method="post">
+                <input type="hidden" name="id" th:value="${user.id}">
+                <input name="firstName" th:value="${user.firstName}" required>
+                <input name="lastName" th:value="${user.lastName}" required>
+                <input name="email" type="email" th:value="${user.email}" required>
+                <input name="password" type="password" placeholder="Новый пароль (необязательно)" autocomplete="new-password">
+                <select name="roleId">
+                    <option value="1" th:selected="${user.userRole == 1}">Пользователь</option>
+                    <option value="3" th:selected="${user.userRole == 3}">Менеджер</option>
+                    <option value="2" th:selected="${user.userRole == 2}">Администратор</option>
+                </select>
+                <button class="profile-button">Сохранить</button>
+                <button class="negative-button" th:formaction="@{/management/users/{id}/delete(id=${user.id})}"
+                        onclick="return confirm('Удалить пользователя?')">Удалить</button>
+            </form>
+            <p id="noUsersFound" class="empty-list-message" hidden>Пользователи не найдены.</p>
+        </div>
+    </section>
+</main>
+
+<script src="/js/management.js?v=2"></script>
+</body>
+</html>

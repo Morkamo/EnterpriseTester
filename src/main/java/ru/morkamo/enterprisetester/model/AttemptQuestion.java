@@ -14,6 +14,11 @@ public class AttemptQuestion {
     private Long id;
     @Column(columnDefinition = "TEXT")
     private String text;
+    @ElementCollection
+    @CollectionTable(name = "attempt_question_images", joinColumns = @JoinColumn(name = "attempt_question_id"))
+    @Column(name = "image_name", nullable = false)
+    @OrderColumn(name = "position")
+    private List<String> imageNames = new ArrayList<>();
     private boolean multiple;
     @OneToMany(cascade = CascadeType.ALL)
     @JoinColumn(name = "attempt_question_id", nullable = false)

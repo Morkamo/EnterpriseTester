@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Ответы пользователя</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"><link rel="stylesheet" href="/css/general.css?v=5"><link rel="stylesheet" href="/css/mainpage.css"><link rel="stylesheet" href="/css/management.css?v=4"></head>
+<body class="main-page">
+<header class="main-header"><span class="user-name" th:text="${userNames.get(attempt.userId)}">Пользователь</span><a class="profile-button" th:href="@{/management/tests/{id}/statistics(id=${attempt.testId})}">Назад</a></header>
+<main class="main-content">
+ <h1 th:text="${attempt.testName}"></h1>
+ <p th:text="|${attempt.score} из ${attempt.maxScore} баллов — ${attempt.percentage}%|"></p>
+ <article class="answer-review" th:each="question,index : ${attempt.questions}">
+  <h2 th:text="|Вопрос ${index.count}|"></h2><p th:text="${question.text}"></p>
+  <div class="question-images">
+   <img class="question-image" th:each="imageName, imageIndex : ${question.imageNames}"
+        th:src="@{/management/tests/{testId}/statistics/{attemptId}/questions/{index}/images/{imageIndex}(testId=${attempt.testId},attemptId=${attempt.id},index=${index.index},imageIndex=${imageIndex.index})}"
+        alt="Изображение вопроса">
+  </div>
+  <div th:each="option : ${question.options}" class="review-option"
+       th:classappend="${option.selected && option.correct ? 'correct' : (option.selected ? 'incorrect' : (option.correct ? 'correct-answer' : ''))}">
+   <span th:text="${option.text}"></span><span th:if="${option.selected}" th:text="${option.correct ? 'Верно' : 'Неверно'}"></span>
+   <span th:if="${!option.selected && option.correct}">Верный вариант</span>
+  </div>
+ </article>
+</main>
+</body>
+</html>

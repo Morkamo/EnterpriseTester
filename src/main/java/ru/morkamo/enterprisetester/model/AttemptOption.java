@@ -14,4 +14,5 @@ public class AttemptOption {
     private String text;
     private boolean correct;
     private boolean selected;
+    private int points;
 }
