@@ -143,8 +143,11 @@ public class ManagementService {
         if (userIds == null || userIds.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Назначьте пользователей");
         }
-        boolean effectiveTimed = settings.isEnableTimeLimit() && timed;
-        Integer minutes = parseMinutes(effectiveTimed, minutesText);
+        if (timed && !settings.isEnableTimeLimit()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Создание временных тестов отключено");
+        }
+        Integer minutes = parseMinutes(timed, minutesText);
         var available = questions(ownerId, admin);
         var allowed = available.stream().map(Question::getId).collect(java.util.stream.Collectors.toSet());
         if (!allowed.containsAll(uniqueQuestionIds)) throw forbidden();
@@ -152,8 +155,8 @@ public class ManagementService {
         test.setOwnerId(ownerId);
         test.setName(name.trim());
         test.setDescription(description == null ? "" : description.trim());
-        test.setTemporaryTest(effectiveTimed);
-        test.setTimeMinutes(effectiveTimed ? minutes : null);
+        test.setTemporaryTest(timed);
+        test.setTimeMinutes(timed ? minutes : null);
         test.setQuestions(new ArrayList<>(questions.findAllById(uniqueQuestionIds)));
         var assignedUsers = users.findAllById(userIds).stream().filter(user -> !user.isDeleted()).toList();
         if (assignedUsers.size() != new HashSet<>(userIds).size()) {

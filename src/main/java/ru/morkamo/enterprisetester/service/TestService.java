@@ -48,7 +48,7 @@ public class TestService {
     }
 
     public Integer timeLimit(TestDefinition test) {
-        return settings.isEnableTimeLimit() && test.isTemporaryTest() ? test.getTimeMinutes() : null;
+        return test.isTemporaryTest() ? test.getTimeMinutes() : null;
     }
 
     public TestAttempt start(Long testId, Long userId) {
@@ -83,9 +83,9 @@ public class TestService {
         attempt.setTestName(test.getName());
         attempt.setStartedAt(Instant.now());
         attempt.setAnswerMode(settings.getMultiAnswerMode().name());
-        attempt.setShowCountdown(settings.isEnableTimeLimit() && settings.isShowCountdown());
+        attempt.setShowCountdown(settings.isShowCountdown());
         var minutes = timeLimit(test);
-        if (settings.isEnableTimeLimit() && test.isTemporaryTest()) {
+        if (test.isTemporaryTest()) {
             if (minutes == null || minutes < 1) {
                 throw error(HttpStatus.CONFLICT, "Для временного теста укажите время в минутах");
             }
