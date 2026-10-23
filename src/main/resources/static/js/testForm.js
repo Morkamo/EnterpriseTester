@@ -5,44 +5,25 @@ const minutes = form.elements.minutes;
 const questionCountError = document.getElementById('questionCountError');
 const questionRows = document.getElementById('questionRows');
 const questionRowTemplate = document.getElementById('questionRowTemplate');
-const addQuestionButton = document.getElementById('addQuestion');
+const questionPicker = document.getElementById('questionPicker');
 
-function addQuestion() {
-    if (!hasAvailableQuestions()) return;
-    const row = questionRowTemplate.content.firstElementChild.cloneNode(true);
-    row.querySelector('.remove-button').addEventListener('click', () => {
-        row.remove();
-        refreshQuestionOptions();
-    });
-    row.querySelector('select').addEventListener('change', refreshQuestionOptions);
-    questionRows.append(row);
-    refreshQuestionOptions();
-}
-
-function hasAvailableQuestions() {
-    const total = questionRowTemplate.content.querySelectorAll('option[value]:not([value=""])').length;
-    const chosen = new Set([...questionRows.querySelectorAll('select')]
-        .map(select => select.value).filter(Boolean));
-    return questionRows.querySelectorAll('select').length < total && chosen.size < total;
-}
-
-function refreshQuestionOptions() {
-    const selects = [...questionRows.querySelectorAll('select')];
-    const allOptions = [...questionRowTemplate.content.querySelector('select').options];
-    for (const select of selects) {
-        const current = select.value;
-        const chosenElsewhere = new Set(selects.filter(other => other !== select)
-            .map(other => other.value).filter(Boolean));
-        select.replaceChildren(...allOptions
-            .filter(option => !option.value || !chosenElsewhere.has(option.value))
-            .map(option => option.cloneNode(true)));
-        select.value = current;
+questionPicker.addEventListener('change', event => {
+    const checkbox = event.target;
+    const existing = questionRows.querySelector('[data-question-id="' + checkbox.value + '"]');
+    if (!checkbox.checked) {
+        existing?.remove();
+    } else if (!existing) {
+        const row = questionRowTemplate.content.firstElementChild.cloneNode(true);
+        row.dataset.questionId = checkbox.value;
+        row.querySelector('span').textContent = checkbox.previousElementSibling.textContent;
+        row.querySelector('.remove-button').addEventListener('click', () => {
+            checkbox.checked = false;
+            checkbox.dispatchEvent(new Event('change', {bubbles: true}));
+        });
+        questionRows.append(row);
     }
-    if (addQuestionButton) addQuestionButton.disabled = !hasAvailableQuestions();
-    if (questionCountError) questionCountError.hidden = true;
-}
-
-if (addQuestionButton) addQuestionButton.addEventListener('click', addQuestion);
+    questionCountError.hidden = true;
+});
 
 function toggleTime() {
     if (!timed || !timeField || !minutes) return;
@@ -59,8 +40,8 @@ if (minutes) minutes.addEventListener('input', () => {
 
 form.addEventListener('submit', event => {
     const minimum = Number(form.dataset.minimumQuestions);
-    const values = Array.from(form.querySelectorAll('[name="questionIds"]'))
-        .map(select => select.value).filter(Boolean);
+    const values = Array.from(form.querySelectorAll('[name="questionIds"]:checked'))
+        .map(checkbox => checkbox.value);
     const uniqueValues = new Set(values);
     if (uniqueValues.size < minimum) {
         event.preventDefault();

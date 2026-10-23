@@ -12,6 +12,8 @@ import java.util.List;
 public class AttemptQuestion {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(length = 255)
+    private String title;
     @Column(columnDefinition = "TEXT")
     private String text;
     @ElementCollection

@@ -14,6 +14,8 @@ public class Question {
     private Long id;
     private Long ownerId;
     private boolean multipleAllowed;
+    @Column(length = 255)
+    private String title;
     @Column(name = "question", columnDefinition = "TEXT")
     private String text;
     @ElementCollection
@@ -23,4 +25,8 @@ public class Question {
     private List<String> imageNames = new ArrayList<>();
     @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Answer> answers = new ArrayList<>();
+
+    public String getDisplayTitle() {
+        return title == null || title.isBlank() ? text : title;
+    }
 }

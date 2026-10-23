@@ -38,6 +38,68 @@
     font-size: 14px;
 }
 
+.auth-login-row {
+    display: flex;
+    gap: 8px;
+}
+
+.auth-login-row .auth-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.auth-login-row .auth-type-button {
+    flex: 0 0 44px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+}
+
+.auth-type-button span {
+    font-size: 13px;
+    line-height: 1;
+}
+
+.auth-type-menu {
+    width: 210px;
+    padding: 6px;
+    border: 1px solid #CFCFCF;
+    border-radius: 6px;
+    background: var(--background-color);
+    color: inherit;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+
+@supports (position-area: top) {
+    .auth-type-menu {
+        inset: auto;
+        position-area: top;
+        position-try-fallbacks: flip-block;
+        margin: 8px 0;
+    }
+}
+
+.auth-type-menu button {
+    width: 100%;
+    padding: 10px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.auth-type-menu button + button {
+    margin-top: 6px;
+}
+
+.auth-type-menu button:hover,
+.auth-type-menu button[aria-pressed="true"] {
+    background: var(--button-color-base);
+    color: white;
+}
+
 .auth-message {
     display: none;
     text-align: center;
@@ -53,9 +115,8 @@
     color: var(--label-error-color);
 }
 
-.auth-button {
-    width: 100%;
-
+.auth-button,
+.auth-type-button {
     padding: 10px;
 
     border: none;
@@ -66,4 +127,8 @@
 
     font-size: 15px;
     cursor: pointer;
+}
+
+.auth-button {
+    width: 100%;
 }

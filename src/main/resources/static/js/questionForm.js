@@ -3,7 +3,7 @@ function addAnswer() {
  const row = document.createElement('div');
  row.className = 'answer-row';
  row.innerHTML = '<input name="answerText" placeholder="Вариант ответа" required>' +
-  '<input name="points" type="number" min="0" value="0" required>' +
+  '<input name="points" type="number" min="0" step="any" inputmode="decimal" value="0" required>' +
   '<button type="button" class="remove-button" onclick="this.parentElement.remove()">−</button>';
  rows.append(row);
 }

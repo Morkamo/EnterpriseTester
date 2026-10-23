@@ -25,7 +25,7 @@
     <div class="tests-container">
         <article class="test-card" th:each="attempt : ${history}">
             <h3 th:text="${attempt.testName}">Тест</h3>
-            <p th:text="|Баллы: ${attempt.score} из ${attempt.maxScore}|"></p>
+            <p th:text="|Баллы: ${attempt.scoreText} из ${attempt.maxScoreText}|"></p>
             <p th:text="|Результат: ${attempt.percentage}%|"></p>
             <a th:href="@{/attempts/{id}/result(id=${attempt.id})}">Посмотреть результат</a>
         </article>

@@ -2,28 +2,31 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Авторизация</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="/css/general.css">
-  <link rel="stylesheet" href="/css/authpage.css">
+  <link rel="stylesheet" href="/css/authpage.css?v=4">
 </head>
 <body class="auth-page">
 
 <div class="auth-modal-body">
   <label class="auth-title">Авторизация</label>
 
-  <label>
-    <input
-            id="email"
-            class="auth-input"
-            type="email"
-            placeholder="Email"
-            maxlength="100"
-    >
-  </label>
+  <div class="auth-login-row">
+    <input id="email" name="email" class="auth-input" type="email" placeholder="Email"
+           aria-label="Email" autocomplete="username" maxlength="100" required>
+    <button class="auth-type-button" type="button" popovertarget="loginTypeMenu" aria-label="Способ входа">
+      <span aria-hidden="true">•••</span>
+    </button>
+  </div>
+  <div id="loginTypeMenu" class="auth-type-menu" popover aria-label="Способ входа">
+    <button type="button" data-login-type="email" aria-pressed="true">Email</button>
+    <button type="button" data-login-type="username" aria-pressed="false">Имя пользователя</button>
+  </div>
 
   <label>
     <input
@@ -31,7 +34,10 @@
             class="auth-input"
             type="password"
             placeholder="Пароль"
+            aria-label="Пароль"
+            autocomplete="current-password"
             maxlength="255"
+            required
     >
   </label>
 
@@ -42,7 +48,7 @@
     Войти
   </button>
 </div>
-<script src="/js/authpage.js"></script>
+<script src="/js/authpage.js?v=2"></script>
 
 </body>
 </html>

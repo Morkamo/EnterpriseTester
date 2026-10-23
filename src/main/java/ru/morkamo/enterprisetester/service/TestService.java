@@ -10,6 +10,8 @@ import ru.morkamo.enterprisetester.model.*;
 import ru.morkamo.enterprisetester.repository.*;
 import java.time.Instant;
 import java.util.*;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @Service
 @Transactional
@@ -97,6 +99,7 @@ public class TestService {
                 throw error(HttpStatus.CONFLICT, "У вопроса нет правильных вариантов ответа");
             }
             var copy = new AttemptQuestion();
+            copy.setTitle(question.getTitle());
             copy.setText(question.getText());
             copy.getImageNames().addAll(question.getImageNames());
             copy.setMultiple(question.isMultipleAllowed());
@@ -163,43 +166,45 @@ public class TestService {
 
     private void finish(TestAttempt attempt, Instant finishedAt) {
         int correctCount = 0;
-        double score = 0;
-        double maxScore = 0;
+        BigDecimal score = BigDecimal.ZERO;
+        BigDecimal maxScore = BigDecimal.ZERO;
         for (var question : attempt.getQuestions()) {
             boolean exact = question.isMultiple()
                     ? question.getOptions().stream().allMatch(o -> o.isSelected() == o.isCorrect())
                     : question.getOptions().stream().anyMatch(o -> o.isSelected() && o.isCorrect());
-            double questionMax = question.isMultiple()
-                    ? question.getOptions().stream().filter(o -> o.getPoints() > 0).mapToInt(AttemptOption::getPoints).sum()
-                    : question.getOptions().stream().mapToInt(AttemptOption::getPoints).max().orElse(0);
-            maxScore += questionMax;
+            BigDecimal questionMax = question.isMultiple()
+                    ? question.getOptions().stream().map(AttemptOption::getPoints).filter(value -> value.signum() > 0)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    : question.getOptions().stream().map(AttemptOption::getPoints).max(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+            maxScore = maxScore.add(questionMax);
             if (!question.isMultiple()) {
                 if (exact) correctCount++;
-                score += question.getOptions().stream().filter(AttemptOption::isSelected)
-                        .filter(AttemptOption::isCorrect).mapToInt(AttemptOption::getPoints).sum();
+                score = score.add(question.getOptions().stream().filter(AttemptOption::isSelected)
+                        .filter(AttemptOption::isCorrect).map(AttemptOption::getPoints).reduce(BigDecimal.ZERO, BigDecimal::add));
                 continue;
             }
             var mode = answerMode(attempt.getAnswerMode());
             if (mode == MultiAnswerMode.NONE) {
                 if (exact) {
-                    score += questionMax;
+                    score = score.add(questionMax);
                     correctCount++;
                 }
             } else if (mode == MultiAnswerMode.FULL) {
                 if (question.getOptions().stream().anyMatch(o -> o.isSelected() && o.isCorrect())) {
-                    score += questionMax;
+                    score = score.add(questionMax);
                     correctCount++;
                 }
             } else {
                 if (exact) correctCount++;
-                score += question.getOptions().stream().filter(o -> o.isSelected() && o.isCorrect())
-                        .mapToInt(AttemptOption::getPoints).sum();
+                score = score.add(question.getOptions().stream().filter(o -> o.isSelected() && o.isCorrect())
+                        .map(AttemptOption::getPoints).reduce(BigDecimal.ZERO, BigDecimal::add));
             }
         }
         attempt.setCorrectCount(correctCount);
         attempt.setScore(score);
         attempt.setMaxScore(maxScore);
-        attempt.setPercentage(maxScore == 0 ? 0 : Math.round(score / maxScore * 10000.0) / 100.0);
+        attempt.setPercentage(maxScore.signum() == 0 ? 0 : score.multiply(BigDecimal.valueOf(100))
+                .divide(maxScore, 2, RoundingMode.HALF_UP).doubleValue());
         attempt.setFinishedAt(finishedAt);
     }
 

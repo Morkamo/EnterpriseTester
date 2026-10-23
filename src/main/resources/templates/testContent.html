@@ -21,6 +21,7 @@
     <div class="test-content-scroll">
         <article class="test-content-question" th:each="question, index : ${test.questions}">
             <h2 th:text="|Вопрос ${index.count}|"></h2>
+            <h3 th:if="${question.title != null}" th:text="${question.title}"></h3>
             <p class="content-question-text" th:text="${question.text}"></p>
             <div class="question-images">
                 <img class="question-image" th:each="imageName, imageIndex : ${question.imageNames}"
@@ -30,7 +31,7 @@
                 <div class="content-answer" th:each="answer : ${question.answers}"
                      th:classappend="${answer.correct ? 'correct-answer' : ''}">
                     <span th:text="${answer.text}"></span>
-                    <span class="answer-points" th:text="|${answer.points} балл(ов)|"></span>
+                    <span class="answer-points" th:text="|${answer.pointsText} балл(ов)|"></span>
                 </div>
             </div>
         </article>

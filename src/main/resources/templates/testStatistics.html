@@ -12,7 +12,7 @@
  <div class="management-list">
   <a class="management-item statistic-link" th:each="attempt : ${attempts}" th:href="@{/management/tests/{testId}/statistics/{attemptId}(testId=${test.id},attemptId=${attempt.id})}">
    <span th:text="${userNames.get(attempt.userId) ?: 'Удалённый пользователь'}"></span>
-   <span th:text="|${attempt.score} из ${attempt.maxScore} баллов|"></span>
+   <span th:text="|${attempt.scoreText} из ${attempt.maxScoreText} баллов|"></span>
    <span th:text="|${attempt.percentage}%|"></span>
   </a>
   <p th:if="${attempts.isEmpty()}">Нет завершённых попыток.</p>

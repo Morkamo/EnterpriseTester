@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="/css/general.css?v=4">
     <link rel="stylesheet" href="/css/mainpage.css">
-    <link rel="stylesheet" href="/css/management.css?v=4">
+    <link rel="stylesheet" href="/css/management.css?v=10">
 </head>
 <body class="main-page management-page">
 <header class="main-header">
@@ -29,6 +29,7 @@
     </nav>
 
     <p class="error-message" th:if="${error}" th:text="${error}"></p>
+    <p class="success-message" role="status" th:if="${success}" th:text="${success}"></p>
 
     <section th:if="${section == 'tests'}">
         <div class="section-title">
@@ -72,12 +73,27 @@
     <section th:if="${section == 'questions'}">
         <div class="section-title">
             <h1>Вопросы</h1>
-            <a class="profile-button" href="/management/questions/new">Создать вопрос</a>
+            <div class="question-actions">
+                <form id="questionImportForm" th:action="@{/management/questions/import}" method="post" enctype="multipart/form-data">
+                    <input id="questionImportFile" type="file" name="file" accept=".csv,text/csv" hidden>
+                    <button id="importQuestions" class="profile-button" type="button">Импорт вопросов</button>
+                </form>
+                <a class="profile-button" href="/management/questions/new">Создать вопрос</a>
+            </div>
         </div>
+        <p id="importError" class="error-message" role="alert" hidden></p>
+        <dialog id="questionImportDialog" class="import-dialog">
+            <div class="section-title">
+                <h2>Предпросмотр импорта</h2>
+                <button class="negative-button" type="button" onclick="document.getElementById('questionImportDialog').close()">Закрыть</button>
+            </div>
+            <div id="questionImportPreview" class="import-preview"></div>
+            <button id="applyImport" class="profile-button" type="submit" form="questionImportForm">Применить</button>
+        </dialog>
 
         <div class="management-list">
             <article class="management-item" th:each="question : ${questions}">
-                <span th:text="${question.text}"></span>
+                <span th:text="${question.displayTitle}"></span>
                 <div class="item-actions">
                     <a class="profile-button" th:href="@{/management/questions/{id}(id=${question.id})}">Изменить</a>
                     <form th:action="@{/management/questions/{id}/delete(id=${question.id})}" method="post"
@@ -98,6 +114,8 @@
             <input name="firstName" placeholder="Имя" required>
             <input name="lastName" placeholder="Фамилия" required>
             <input name="email" type="email" placeholder="Email" required>
+            <input name="username" placeholder="Имя пользователя (необязательно)" maxlength="32"
+                   pattern="[A-Za-z0-9_.\-]{3,32}" title="3–32 символа: латинские буквы, цифры, точка, дефис, подчёркивание">
             <input name="password" type="password" placeholder="Пароль" autocomplete="new-password" required>
             <select name="roleId">
                 <option value="1">Пользователь</option>
@@ -125,6 +143,9 @@
                     <option value="Администратор">Администратор</option>
                 </select>
             </label>
+            <label>Имя пользователя
+                <input type="search" data-user-filter="username" placeholder="Поиск по логину">
+            </label>
         </div>
 
         <div class="management-list users-list">
@@ -134,6 +155,8 @@
                 <input name="firstName" th:value="${user.firstName}" required>
                 <input name="lastName" th:value="${user.lastName}" required>
                 <input name="email" type="email" th:value="${user.email}" required>
+                <input name="username" th:value="${user.username}" placeholder="Имя пользователя" maxlength="32"
+                       pattern="[A-Za-z0-9_.\-]{3,32}" title="3–32 символа: латинские буквы, цифры, точка, дефис, подчёркивание">
                 <input name="password" type="password" placeholder="Новый пароль (необязательно)" autocomplete="new-password">
                 <select name="roleId">
                     <option value="1" th:selected="${user.userRole == 1}">Пользователь</option>
@@ -149,6 +172,6 @@
     </section>
 </main>
 
-<script src="/js/management.js?v=2"></script>
+<script src="/js/management.js?v=3"></script>
 </body>
 </html>

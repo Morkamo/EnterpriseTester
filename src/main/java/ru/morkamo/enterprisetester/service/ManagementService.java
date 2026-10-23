@@ -8,6 +8,8 @@ import org.springframework.web.server.ResponseStatusException;
 import ru.morkamo.enterprisetester.model.*;
 import ru.morkamo.enterprisetester.repository.*;
 import java.util.*;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @Service
 @Transactional
@@ -70,8 +72,8 @@ public class ManagementService {
         return question;
     }
 
-    public Question saveQuestion(Long id, String text, boolean multiple,
-                                 List<String> answerTexts, List<Integer> points,
+    public Question saveQuestion(Long id, String title, String text, boolean multiple,
+                                 List<String> answerTexts, List<BigDecimal> points,
                                  List<org.springframework.web.multipart.MultipartFile> imagesToAdd,
                                  List<Integer> removeImages,
                                  Long ownerId, boolean admin) {
@@ -79,8 +81,12 @@ public class ManagementService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Добавьте хотя бы два варианта");
         }
         if (text == null || text.isBlank()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Введите вопрос");
+        if (title != null && title.trim().length() > 255) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Заголовок должен быть не длиннее 255 символов");
+        }
         var question = id == null ? new Question() : question(id, ownerId, admin);
         if (id == null) question.setOwnerId(ownerId);
+        question.setTitle(title == null || title.isBlank() ? null : title.trim());
         question.setText(text.trim());
         question.setMultipleAllowed(multiple);
         question.getAnswers().clear();
@@ -88,8 +94,12 @@ public class ManagementService {
             if (answerTexts.get(i).isBlank()) continue;
             var answer = new Answer();
             answer.setText(answerTexts.get(i).trim());
-            answer.setPoints(Math.max(0, points.get(i)));
-            answer.setCorrect(answer.getPoints() > 0);
+            var value = points.get(i);
+            if (value == null || value.compareTo(new BigDecimal("9999999999999999.99")) > 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Недопустимое количество баллов");
+            }
+            answer.setPoints(value.max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP));
+            answer.setCorrect(answer.getPoints().signum() > 0);
             answer.setQuestion(question);
             question.getAnswers().add(answer);
         }
@@ -114,6 +124,11 @@ public class ManagementService {
         }
         names.addAll(newNames);
         return questions.save(question);
+    }
+
+    public void importQuestions(List<Question> imported, Long ownerId) {
+        imported.forEach(question -> question.setOwnerId(ownerId));
+        questions.saveAll(imported);
     }
 
     public void deleteQuestion(Long id, Long ownerId, boolean admin) {
@@ -201,7 +216,7 @@ public class ManagementService {
         return attempt;
     }
 
-    public User saveUser(Long id, String firstName, String lastName, String email,
+    public User saveUser(Long id, String firstName, String lastName, String email, String username,
                          String password, Long roleId) {
         if (firstName.isBlank() || lastName.isBlank() || email.isBlank()
                 || (id == null && (password == null || password.isBlank()))) {
@@ -214,12 +229,24 @@ public class ManagementService {
         if (duplicate.isPresent() && !Objects.equals(duplicate.get().getId(), id)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email уже используется");
         }
+        String loginName = username == null || username.isBlank() ? null : username.trim().toLowerCase(Locale.ROOT);
+        if (loginName != null) {
+            if (!loginName.matches("[a-z0-9_.-]{3,32}")) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Имя пользователя: 3–32 символа, латинские буквы, цифры, точка, дефис или подчёркивание");
+            }
+            var existing = users.findByUsernameIgnoreCase(loginName);
+            if (existing.isPresent() && !Objects.equals(existing.get().getId(), id)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Имя пользователя уже используется");
+            }
+        }
         var user = id == null ? new User() : users.findById(id)
                 .filter(existing -> !existing.isDeleted())
                 .orElseThrow(() -> notFound("Пользователь не найден"));
         user.setFirstName(firstName.trim());
         user.setLastName(lastName.trim());
         user.setEmail(email.trim());
+        user.setUsername(loginName);
         if (password != null && !password.isBlank()) user.setPassword(passwords.encode(password));
         user.setUserRole(roleId);
         return users.save(user);

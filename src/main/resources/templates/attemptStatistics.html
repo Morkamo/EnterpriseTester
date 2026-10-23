@@ -6,9 +6,11 @@
 <header class="main-header"><span class="user-name" th:text="${userNames.get(attempt.userId)}">Пользователь</span><a class="profile-button" th:href="@{/management/tests/{id}/statistics(id=${attempt.testId})}">Назад</a></header>
 <main class="main-content">
  <h1 th:text="${attempt.testName}"></h1>
- <p th:text="|${attempt.score} из ${attempt.maxScore} баллов — ${attempt.percentage}%|"></p>
+ <p th:text="|${attempt.scoreText} из ${attempt.maxScoreText} баллов — ${attempt.percentage}%|"></p>
  <article class="answer-review" th:each="question,index : ${attempt.questions}">
-  <h2 th:text="|Вопрос ${index.count}|"></h2><p th:text="${question.text}"></p>
+  <h2 th:text="|Вопрос ${index.count}|"></h2>
+  <h3 th:if="${question.title != null}" th:text="${question.title}"></h3>
+  <p th:text="${question.text}"></p>
   <div class="question-images">
    <img class="question-image" th:each="imageName, imageIndex : ${question.imageNames}"
         th:src="@{/management/tests/{testId}/statistics/{attemptId}/questions/{index}/images/{imageIndex}(testId=${attempt.testId},attemptId=${attempt.id},index=${index.index},imageIndex=${imageIndex.index})}"

@@ -13,6 +13,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query(value = "select * from users where email = :email", nativeQuery = true)
     Optional<User> findByEmail(String email);
+    Optional<User> findByUsernameIgnoreCase(String username);
     List<User> findAllByOrderByLastNameAscFirstNameAsc();
     List<User> findByDeletedFalseOrderByLastNameAscFirstNameAsc();
 

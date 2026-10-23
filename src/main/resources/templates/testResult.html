@@ -19,7 +19,7 @@
     <h2>Тест завершён</h2>
     <p th:text="|Всего вопросов: ${attempt.questions.size()}|"></p>
     <p th:text="|Верно отвечено: ${attempt.correctCount}|"></p>
-    <p th:text="|Набрано баллов: ${attempt.score} из ${attempt.maxScore}|"></p>
+    <p th:text="|Набрано баллов: ${attempt.scoreText} из ${attempt.maxScoreText}|"></p>
     <p th:text="|Результат: ${attempt.percentage}%|"></p>
     <a href="/mainpage">На главную</a>
 </main>

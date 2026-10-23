@@ -1,0 +1,18 @@
+<div xmlns:th="http://www.thymeleaf.org">
+    <p class="error-message" th:if="${error}" th:text="${error}"></p>
+    <th:block th:unless="${error}">
+        <p th:text="|Вопросов: ${questions.size()}|"></p>
+        <article class="answer-review" th:each="question : ${questions}">
+            <h3 th:text="${question.title}"></h3>
+            <p class="import-question-text" th:text="${question.text}"></p>
+            <p th:text="${question.multipleAllowed ? 'Множественный выбор' : 'Один вариант ответа'}"></p>
+            <div class="content-answer-list">
+                <div class="content-answer" th:each="answer : ${question.answers}"
+                     th:classappend="${answer.correct ? 'correct-answer' : ''}">
+                    <span th:text="${answer.text}"></span>
+                    <span class="answer-points" th:text="|${answer.pointsText} балл(ов)|"></span>
+                </div>
+            </div>
+        </article>
+    </th:block>
+</div>

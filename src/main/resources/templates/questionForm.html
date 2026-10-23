@@ -8,6 +8,7 @@
  <p class="error-message" th:if="${error}" th:text="${error}"></p>
  <form class="simple-form" th:action="@{/management/questions/save}" method="post" enctype="multipart/form-data">
   <input th:if="${question != null}" type="hidden" name="id" th:value="${question.id}">
+  <label>Заголовок (необязательно)<input name="title" maxlength="255" th:value="${question?.title}"></label>
   <label>Текст вопроса<textarea name="text" required th:text="${question?.text}"></textarea></label>
   <p>Изображения (до 10 PNG/JPEG, до 10 МБ каждое)</p>
   <button id="addImage" type="button" class="profile-button">Добавить изображение</button>
@@ -22,7 +23,7 @@
   <div id="answerRows">
    <div class="answer-row" th:each="answer : ${question?.answers}">
     <input name="answerText" placeholder="Вариант ответа" th:value="${answer.text}" required>
-    <input name="points" type="number" min="0" th:value="${answer.points}" required>
+    <input name="points" type="number" min="0" step="any" inputmode="decimal" th:value="${answer.pointsText}" required>
     <button type="button" class="remove-button" onclick="this.parentElement.remove()">−</button>
    </div>
   </div>
@@ -32,6 +33,6 @@
   <button class="profile-button">Сохранить вопрос</button>
  </form>
 </main>
-<script src="/js/questionForm.js?v=3"></script>
+<script src="/js/questionForm.js?v=4"></script>
 </body>
 </html>

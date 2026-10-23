@@ -3,6 +3,7 @@ package ru.morkamo.enterprisetester.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "attempt_options")
@@ -14,5 +15,6 @@ public class AttemptOption {
     private String text;
     private boolean correct;
     private boolean selected;
-    private int points;
+    @Column(precision = 18, scale = 2, nullable = false)
+    private BigDecimal points = BigDecimal.ZERO;
 }

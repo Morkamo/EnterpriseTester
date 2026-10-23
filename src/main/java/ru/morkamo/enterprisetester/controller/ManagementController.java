@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import ru.morkamo.enterprisetester.service.*;
 import java.util.List;
+import java.math.BigDecimal;
 
 @Controller
 @RequestMapping("/management")
@@ -19,13 +20,16 @@ public class ManagementController {
     private final SessionService sessions;
     private final StatisticsExportService statisticsExport;
     private final QuestionImageService images;
+    private final QuestionImportService questionImport;
 
     public ManagementController(ManagementService management, SessionService sessions,
-                                StatisticsExportService statisticsExport, QuestionImageService images) {
+                                StatisticsExportService statisticsExport, QuestionImageService images,
+                                QuestionImportService questionImport) {
         this.management = management;
         this.sessions = sessions;
         this.statisticsExport = statisticsExport;
         this.images = images;
+        this.questionImport = questionImport;
     }
 
     @GetMapping
@@ -61,21 +65,53 @@ public class ManagementController {
     }
 
     @PostMapping("/questions/save")
-    public String saveQuestion(@RequestParam(required = false) Long id, @RequestParam String text,
+    public String saveQuestion(@RequestParam(required = false) Long id,
+                               @RequestParam(required = false) String title, @RequestParam String text,
                                @RequestParam(defaultValue = "false") boolean multiple,
-                               @RequestParam List<String> answerText, @RequestParam List<Integer> points,
+                               @RequestParam List<String> answerText, @RequestParam List<BigDecimal> points,
                                @RequestParam(required = false) List<org.springframework.web.multipart.MultipartFile> imagesToAdd,
                                @RequestParam(required = false) List<Integer> removeImages,
                                HttpSession session, RedirectAttributes redirect) {
         if (!sessions.canManage(session)) return "redirect:/mainpage";
         try {
-            management.saveQuestion(id, text, multiple, answerText, points, imagesToAdd, removeImages,
+            management.saveQuestion(id, title, text, multiple, answerText, points, imagesToAdd, removeImages,
                     sessions.userId(session), sessions.isAdmin(session));
             return "redirect:/management?section=questions";
         } catch (org.springframework.web.server.ResponseStatusException error) {
             redirect.addFlashAttribute("error", error.getReason());
             return "redirect:/management/questions/" + (id == null ? "new" : id);
         }
+    }
+
+    @PostMapping("/questions/import/preview")
+    public String previewQuestions(@RequestParam org.springframework.web.multipart.MultipartFile file,
+                                   HttpSession session, Model model, jakarta.servlet.http.HttpServletResponse response) {
+        if (!sessions.canManage(session)) {
+            response.setStatus(HttpStatus.FORBIDDEN.value());
+            model.addAttribute("error", "Нет доступа к импорту вопросов");
+        } else {
+            try {
+                model.addAttribute("questions", questionImport.parse(file));
+            } catch (org.springframework.web.server.ResponseStatusException error) {
+                response.setStatus(error.getStatusCode().value());
+                model.addAttribute("error", error.getReason());
+            }
+        }
+        return "questionImport";
+    }
+
+    @PostMapping("/questions/import")
+    public String importQuestions(@RequestParam org.springframework.web.multipart.MultipartFile file,
+                                  HttpSession session, RedirectAttributes redirect) {
+        if (!sessions.canManage(session)) return "redirect:/mainpage";
+        try {
+            var questions = questionImport.parse(file);
+            management.importQuestions(questions, sessions.userId(session));
+            redirect.addFlashAttribute("success", "Импортировано вопросов: " + questions.size());
+        } catch (org.springframework.web.server.ResponseStatusException error) {
+            redirect.addFlashAttribute("error", error.getReason());
+        }
+        return "redirect:/management?section=questions";
     }
 
     @GetMapping("/questions/{id}/images/{imageIndex}")
@@ -219,11 +255,12 @@ public class ManagementController {
     public String saveUser(@RequestParam(required = false) Long id,
                            @RequestParam String firstName, @RequestParam String lastName,
                            @RequestParam String email, @RequestParam String password,
+                           @RequestParam(required = false) String username,
                            @RequestParam Long roleId, HttpSession session,
                            RedirectAttributes redirect) {
         if (!sessions.isAdmin(session)) return "redirect:/mainpage";
         try {
-            management.saveUser(id, firstName, lastName, email, password, roleId);
+            management.saveUser(id, firstName, lastName, email, username, password, roleId);
         } catch (org.springframework.web.server.ResponseStatusException error) {
             redirect.addFlashAttribute("error", error.getReason());
         }

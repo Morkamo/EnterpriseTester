@@ -2,6 +2,7 @@ package ru.morkamo.enterprisetester.dto.request;
 
 public record LoginRequest(
         String email,
-        String password
+        String password,
+        String username
 ) {
 }

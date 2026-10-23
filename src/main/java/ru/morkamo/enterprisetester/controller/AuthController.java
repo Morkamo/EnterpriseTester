@@ -3,6 +3,7 @@ package ru.morkamo.enterprisetester.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -41,13 +42,18 @@ public class AuthController {
     @PostMapping("/login")
     public LoginResponse login(@RequestBody LoginRequest login, HttpServletRequest request,
                                HttpServletResponse response) {
-        if (login.email() == null || login.email().isBlank()
-                || login.password() == null || login.password().isBlank()) {
+        boolean byEmail = login.email() != null && !login.email().isBlank();
+        boolean byUsername = login.username() != null && !login.username().isBlank();
+        if (byEmail == byUsername || login.password() == null || login.password().isBlank()) {
             return failure(request);
         }
         try {
+            String email = byEmail ? login.email().trim() : users.findByUsernameIgnoreCase(login.username().trim())
+                    .filter(user -> !user.isDeleted())
+                    .orElseThrow(() -> new BadCredentialsException("Неверный логин"))
+                    .getEmail();
             var authentication = authenticator.authenticate(
-                    UsernamePasswordAuthenticationToken.unauthenticated(login.email(), login.password()));
+                    UsernamePasswordAuthenticationToken.unauthenticated(email, login.password()));
             var account = users.findByEmail(authentication.getName()).orElseThrow();
             var session = request.getSession(true);
             request.changeSessionId();

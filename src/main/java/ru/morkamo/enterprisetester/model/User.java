@@ -19,6 +19,8 @@ public class User {
     @Column(name = "last_name")
     private String lastName;
     private String email;
+    @Column(length = 32, unique = true)
+    private String username;
     private String password;
     @Column(name = "user_role_id")
     private Long userRole;
