@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import ru.morkamo.enterprisetester.model.TestAttempt;
 import ru.morkamo.enterprisetester.model.TestDefinition;
 import ru.morkamo.enterprisetester.model.User;
+import ru.morkamo.enterprisetester.model.AttemptQuestion;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -22,6 +23,9 @@ public class StatisticsExportService {
     private static final String[] HEADERS = {
             "Пользователь", "Название теста", "Верных ответов", "Всего вопросов",
             "Процент выполнения", "Дата начала", "Дата окончания", "Длительность"
+    };
+    private static final String[] ANSWER_HEADERS = {
+            "Пользователь", "№ вопроса", "Вопрос", "Ответ пользователя", "Правильные ответы"
     };
     private static final DateTimeFormatter DATE_FORMAT =
             DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss").withZone(ZoneId.systemDefault());
@@ -44,7 +48,23 @@ public class StatisticsExportService {
         return csv.toString().getBytes(StandardCharsets.UTF_8);
     }
 
-    public byte[] xlsx(TestDefinition test, List<TestAttempt> attempts, Map<Long, User> users) {
+    public byte[] answersCsv(List<TestAttempt> attempts, Map<Long, User> users) {
+        var csv = new StringBuilder("\uFEFF");
+        csv.append(String.join(";", ANSWER_HEADERS)).append("\r\n");
+        for (var attempt : attempts) {
+            for (int index = 0; index < attempt.getQuestions().size(); index++) {
+                var values = answerValues(attempt, index, users);
+                for (int column = 0; column < values.length; column++) {
+                    if (column > 0) csv.append(';');
+                    csv.append(csvValue(values[column]));
+                }
+                csv.append("\r\n");
+            }
+        }
+        return csv.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    public byte[] xlsx(TestDefinition test, List<TestAttempt> attempts, Map<Long, User> users, boolean extended) {
         try (var workbook = new XSSFWorkbook(); var output = new ByteArrayOutputStream()) {
             var sheet = workbook.createSheet("Результаты");
             sheet.createFreezePane(0, 1);
@@ -74,11 +94,71 @@ public class StatisticsExportService {
                 sheet.setColumnWidth(column, widths[column] * 256);
             }
             sheet.setAutoFilter(new CellRangeAddress(0, Math.max(0, attempts.size()), 0, HEADERS.length - 1));
+            if (extended) writeAnswers(workbook, attempts, users, headerStyle);
             workbook.write(output);
             return output.toByteArray();
         } catch (IOException error) {
             throw new IllegalStateException("Не удалось сформировать Excel-файл", error);
         }
+    }
+
+    private void writeAnswers(Workbook workbook, List<TestAttempt> attempts, Map<Long, User> users,
+                              CellStyle headerStyle) {
+        var sheet = workbook.createSheet("Ответы");
+        sheet.createFreezePane(2, 1);
+        var header = sheet.createRow(0);
+        for (int column = 0; column < ANSWER_HEADERS.length; column++) {
+            var cell = header.createCell(column);
+            cell.setCellValue(ANSWER_HEADERS[column]);
+            cell.setCellStyle(headerStyle);
+        }
+        var textStyle = workbook.createCellStyle();
+        textStyle.setWrapText(true);
+        textStyle.setVerticalAlignment(VerticalAlignment.TOP);
+        int rowIndex = 1;
+        for (var attempt : attempts) {
+            for (int index = 0; index < attempt.getQuestions().size(); index++) {
+                var row = sheet.createRow(rowIndex++);
+                var values = answerValues(attempt, index, users);
+                int lineCount = 1;
+                for (int column = 2; column < values.length; column++) {
+                    int lines = 0;
+                    for (String line : values[column].split("\n", -1)) {
+                        lines += Math.max(1, (line.length() + 59) / 60);
+                    }
+                    lineCount = Math.max(lineCount, lines);
+                }
+                row.setHeightInPoints(Math.min(409, lineCount * 15));
+                for (int column = 0; column < values.length; column++) {
+                    var cell = row.createCell(column);
+                    if (column == 1) {
+                        cell.setCellValue(index + 1);
+                    } else {
+                        cell.setCellValue(values[column]);
+                    }
+                    cell.setCellStyle(textStyle);
+                }
+            }
+        }
+        int[] widths = {28, 14, 65, 65, 65};
+        for (int column = 0; column < widths.length; column++) {
+            sheet.setColumnWidth(column, widths[column] * 256);
+        }
+        sheet.setAutoFilter(new CellRangeAddress(0, Math.max(0, rowIndex - 1), 0, ANSWER_HEADERS.length - 1));
+    }
+
+    private String[] answerValues(TestAttempt attempt, int index, Map<Long, User> users) {
+        AttemptQuestion question = attempt.getQuestions().get(index);
+        var selected = new java.util.ArrayList<String>();
+        var correct = new java.util.ArrayList<String>();
+        for (var option : question.getOptions()) {
+            if (option.isSelected()) selected.add(option.getText());
+            if (option.isCorrect()) correct.add(option.getText());
+        }
+        String selectedText = "Нет ответа";
+        if (!selected.isEmpty()) selectedText = String.join("\n", selected);
+        return new String[]{userName(attempt.getUserId(), users), String.valueOf(index + 1),
+                question.getText(), selectedText, String.join("\n", correct)};
     }
 
     private void writeRow(Row row, TestDefinition test, TestAttempt attempt, Map<Long, User> users,

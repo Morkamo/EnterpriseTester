@@ -248,6 +248,7 @@ public class ManagementController {
 
     @GetMapping("/tests/{id}/statistics/export")
     public ResponseEntity<byte[]> exportStatistics(@PathVariable Long id, @RequestParam String format,
+                                                   @RequestParam(defaultValue = "simple") String detail,
                                                    HttpSession session) {
         if (!sessions.canManage(session)) {
             return ResponseEntity.status(HttpStatus.FOUND)
@@ -259,13 +260,22 @@ public class ManagementController {
                 ru.morkamo.enterprisetester.model.User::getId, user -> user));
 
         String normalizedFormat = format.toLowerCase(java.util.Locale.ROOT);
+        if (!"simple".equals(detail) && !"extended".equals(detail)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Доступны только упрощённая и расширенная выгрузки");
+        }
+        boolean extended = "extended".equals(detail);
         byte[] file;
         String contentType;
         if ("csv".equals(normalizedFormat)) {
-            file = statisticsExport.csv(test, attempts, users);
+            if (extended) {
+                file = statisticsExport.answersCsv(attempts, users);
+            } else {
+                file = statisticsExport.csv(test, attempts, users);
+            }
             contentType = "text/csv;charset=UTF-8";
         } else if ("xlsx".equals(normalizedFormat)) {
-            file = statisticsExport.xlsx(test, attempts, users);
+            file = statisticsExport.xlsx(test, attempts, users, extended);
             contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
         } else {
             throw new org.springframework.web.server.ResponseStatusException(

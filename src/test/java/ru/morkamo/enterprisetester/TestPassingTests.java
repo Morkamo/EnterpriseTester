@@ -393,6 +393,7 @@ class TestPassingTests {
                 .andReturn();
         try (var workbook = WorkbookFactory.create(
                 new ByteArrayInputStream(xlsxResult.getResponse().getContentAsByteArray()))) {
+            assertEquals(1, workbook.getNumberOfSheets());
             var sheet = workbook.getSheet("Результаты");
             assertEquals("Пользователь", sheet.getRow(0).getCell(0).getStringCellValue());
             assertEquals("One Test", sheet.getRow(1).getCell(0).getStringCellValue());
@@ -400,6 +401,57 @@ class TestPassingTests {
             assertEquals(1, sheet.getRow(1).getCell(2).getNumericCellValue());
             assertTrue(sheet.getRow(1).getCell(5).getDateCellValue().getTime() > 0);
         }
+    }
+
+    @Test
+    void extendedStatisticsExportSavedAnswersWithoutAttemptColumn() throws Exception {
+        var test = sample(3, false);
+        var attempt = service.start(test.getId(), 1L);
+        var question = attempt.getQuestions().get(0);
+        question.setText("Вопрос; \"цитата\"\nСледующая строка");
+        Long selected = correct(question).iterator().next();
+        service.save(attempt.getId(), 1L, 0, Set.of(selected), null, false);
+        var session = new MockHttpSession();
+        session.setAttribute("userId", 2L);
+        String path = "/management/tests/" + test.getId() + "/statistics/export";
+
+        var csvResult = mvc.perform(get(path).param("format", "csv").param("detail", "extended").session(session))
+                .andExpect(status().isOk()).andReturn();
+        var csv = new String(csvResult.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8);
+        assertTrue(csv.startsWith("\uFEFF"));
+        var format = org.apache.commons.csv.CSVFormat.DEFAULT.builder().setDelimiter(';').get();
+        try (var parser = format.parse(new java.io.StringReader(csv.substring(1)))) {
+            var rows = parser.getRecords();
+            assertEquals(4, rows.size());
+            assertEquals(5, rows.get(0).size());
+            assertFalse(rows.get(0).toList().contains("Попытка"));
+            assertEquals("One Test", rows.get(1).get(0));
+            assertEquals("1", rows.get(1).get(1));
+            assertEquals(question.getText(), rows.get(1).get(2));
+            String selectedText = question.getOptions().stream().filter(option -> option.getId().equals(selected))
+                    .findFirst().orElseThrow().getText();
+            assertEquals(selectedText, rows.get(1).get(3));
+            assertEquals(2, rows.get(1).get(4).split("\n").length);
+            assertEquals("Нет ответа", rows.get(2).get(3));
+        }
+
+        var xlsxResult = mvc.perform(get(path).param("format", "xlsx").param("detail", "extended").session(session))
+                .andExpect(status().isOk()).andReturn();
+        try (var workbook = WorkbookFactory.create(new ByteArrayInputStream(xlsxResult.getResponse().getContentAsByteArray()))) {
+            assertEquals(2, workbook.getNumberOfSheets());
+            assertNotNull(workbook.getSheet("Результаты"));
+            var sheet = workbook.getSheet("Ответы");
+            assertEquals(3, sheet.getLastRowNum());
+            assertEquals(5, sheet.getRow(0).getLastCellNum());
+            assertEquals(1, sheet.getRow(1).getCell(1).getNumericCellValue());
+            assertEquals(question.getText(), sheet.getRow(1).getCell(2).getStringCellValue());
+            assertTrue(sheet.getRow(1).getCell(2).getCellStyle().getWrapText());
+            assertTrue(sheet.getRow(1).getHeightInPoints() >= 30);
+            assertEquals("Нет ответа", sheet.getRow(3).getCell(3).getStringCellValue());
+        }
+        assertFalse(attempt.isFinished());
+        mvc.perform(get(path).param("format", "csv").param("detail", "unknown").session(session))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
