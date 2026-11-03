@@ -24,7 +24,7 @@
     <p class="error-message" th:if="${param.error != null}">Тест недоступен или уже завершён.</p>
     <h1>Тесты</h1>
     <div class="tests-container">
-        <a class="test-card" th:each="test : ${tests}" th:href="@{/tests/{id}(id=${test.id})}">
+<a class="test-card" th:each="test : ${tests}" th:href="@{/tests/{id}(id=${test.id})}">
             <h2 th:text="${test.name}">Название теста</h2>
             <p th:text="${test.description}">Описание теста</p>
         </a>

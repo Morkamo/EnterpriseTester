@@ -3,7 +3,6 @@ package ru.morkamo.enterprisetester.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -48,13 +47,13 @@ public class AuthController {
             return failure(request);
         }
         try {
-            String email = byEmail ? login.email().trim() : users.findByUsernameIgnoreCase(login.username().trim())
-                    .filter(user -> !user.isDeleted())
-                    .orElseThrow(() -> new BadCredentialsException("Неверный логин"))
-                    .getEmail();
+            String identifier = (byEmail ? login.email() : login.username()).trim();
+            if (byEmail != identifier.contains("@")) return failure(request);
             var authentication = authenticator.authenticate(
-                    UsernamePasswordAuthenticationToken.unauthenticated(email, login.password()));
-            var account = users.findByEmail(authentication.getName()).orElseThrow();
+                    UsernamePasswordAuthenticationToken.unauthenticated(identifier, login.password()));
+            String nameInContext = authentication.getName();
+            var account = (nameInContext.contains("@") ? users.findByEmail(nameInContext)
+                    : users.findByUsernameIgnoreCase(nameInContext)).orElseThrow();
             var session = request.getSession(true);
             request.changeSessionId();
             var context = SecurityContextHolder.createEmptyContext();

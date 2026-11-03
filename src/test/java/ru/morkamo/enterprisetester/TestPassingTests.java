@@ -109,12 +109,12 @@ class TestPassingTests {
     }
 
     @Test
-    void sampleIsLimitedAndSnapshotSurvivesReload() {
+    void allTestQuestionsAreIncludedAndSnapshotSurvivesReload() {
         var test = sample(24, false);
         test.getQuestions().forEach(item -> item.setTitle("Заголовок " + item.getText()));
         var attempt = service.start(test.getId(), 1L);
         Long id = attempt.getId();
-        assertEquals(20, attempt.getQuestions().size());
+        assertEquals(24, attempt.getQuestions().size());
         var question = attempt.getQuestions().get(0);
         var optionIds = question.getOptions().stream().map(AttemptOption::getId).toList();
         var questionTexts = attempt.getQuestions().stream().map(AttemptQuestion::getText).toList();
@@ -399,6 +399,62 @@ class TestPassingTests {
             assertEquals("Проверочный тест", sheet.getRow(1).getCell(1).getStringCellValue());
             assertEquals(1, sheet.getRow(1).getCell(2).getNumericCellValue());
             assertTrue(sheet.getRow(1).getCell(5).getDateCellValue().getTime() > 0);
+        }
+    }
+
+    @Test
+    void participantManagementRevokesAccessAndAllowsEmptyAssignments() throws Exception {
+        var test = sample(3, true);
+        var attempt = service.start(test.getId(), 1L);
+        var session = new MockHttpSession();
+        session.setAttribute("userId", 2L);
+        mvc.perform(get("/management/tests/" + test.getId() + "/manage").session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Не начал прохождение")))
+                .andExpect(content().string(containsString("data-countdown")));
+
+        management.saveParticipants(test.getId(), List.of(2L), 2L, false);
+        var denied = assertThrows(ResponseStatusException.class, () -> service.getAttempt(attempt.getId(), 1L));
+        assertEquals(409, denied.getStatusCode().value());
+        assertThrows(ResponseStatusException.class,
+                () -> service.save(attempt.getId(), 1L, 0, correct(attempt.getQuestions().get(0)), null, false));
+        assertTrue(service.listTests(1L).stream().noneMatch(item -> item.getId().equals(test.getId())));
+        assertFalse(attempt.isFinished());
+        assertThrows(ResponseStatusException.class,
+                () -> management.saveParticipants(test.getId(), List.of(1L), 7L, false));
+
+        management.saveParticipants(test.getId(), null, 2L, true);
+        assertTrue(test.getTesters().isEmpty());
+        settings.setDefaultQuestionsCount(3);
+        var ids = test.getQuestions().stream().map(question -> question.getId()).toList();
+        var empty = management.createTest("Без участников", "", false, "", ids, null, 2L, true);
+        assertTrue(empty.getTesters().isEmpty());
+
+        management.closeTest(test.getId(), 2L, true);
+        assertThrows(ResponseStatusException.class,
+                () -> management.saveParticipants(test.getId(), List.of(1L), 2L, true));
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void failedTestImportRollsBackNewQuestions() {
+        settings.setDefaultQuestionsCount(3);
+        int initialCount = management.questions(2L, false).size();
+        var content = new StringBuilder("Импорт;Описание;;\n");
+        for (int index = 0; index < 3; index++) {
+            content.append("Новый вопрос ").append(index).append(";Да;1;\n;Нет;;\n");
+        }
+        var file = new MockMultipartFile("file", "test.csv", "text/csv",
+                content.toString().getBytes(StandardCharsets.UTF_8));
+        var importer = new ru.morkamo.enterprisetester.service.QuestionImportService();
+        var transaction = new TransactionTemplate(transactionManager);
+        transaction.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        try {
+            assertThrows(ResponseStatusException.class, () -> transaction.execute(status ->
+                    management.importTest(importer.parseTest(file), List.of(-1L), 2L, true)));
+            assertEquals(initialCount, management.questions(2L, false).size());
+        } finally {
+            settings.setDefaultQuestionsCount(20);
         }
     }
 

@@ -26,8 +26,8 @@ public class SecurityConfig {
 
     @Bean
     UserDetailsService userDetailsService(UserRepository users) {
-        return email -> {
-            var account = users.findByEmail(email)
+        return login -> {
+            var account = (login.contains("@") ? users.findByEmail(login) : users.findByUsernameIgnoreCase(login))
                     .filter(user -> !user.isDeleted())
                     .orElseThrow(() -> new UsernameNotFoundException("Пользователь не найден"));
             String role = switch (account.getUserRole() == null ? 1 : account.getUserRole().intValue()) {
@@ -35,7 +35,7 @@ public class SecurityConfig {
                 case 3 -> "MANAGER";
                 default -> "USER";
             };
-            return User.withUsername(account.getEmail())
+            return User.withUsername(account.getEmail() != null ? account.getEmail() : account.getUsername())
                     .password(account.getPassword()).roles(role).build();
         };
     }

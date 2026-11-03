@@ -171,8 +171,8 @@ class SecurityFlowTests {
     @Test
     void csvImportRequiresPermissionsCsrfAndExplicitConfirmation() throws Exception {
         var file = new org.springframework.mock.web.MockMultipartFile("file", "questions.csv", "text/csv",
-                ("<script>alert(1)</script>;Содержание;Да;0,6;1\n;;Нет;;\n"
-                        + "Второй;Описание;Первый;1;\n;;Второй;;\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                ("<script>alert(1)</script>;Да;0,6;1\n;Нет;;\n"
+                        + "Второй;Первый;1;\n;Второй;;\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
         var user = login("user@test.local");
         for (String endpoint : new String[]{"/management/questions/import/preview", "/management/questions/import"}) {
             mvc.perform(multipart(endpoint).file(file).session(user).header("X-CSRF-TOKEN", csrf(user)))
@@ -192,21 +192,21 @@ class SecurityFlowTests {
         mvc.perform(multipart("/management/questions/import").file(file).session(manager)
                         .header("X-CSRF-TOKEN", csrf(manager)))
                 .andExpect(redirectedUrl("/management?section=questions"))
-                .andExpect(flash().attribute("success", "Импортировано вопросов: 2"));
+                .andExpect(flash().attribute("success", "Успешный импорт"));
         var imported = management.questions(ownerId, false);
         assertEquals(initialCount + 2, imported.size());
         assertTrue(imported.stream().allMatch(question -> ownerId.equals(question.getOwnerId())));
         var question = imported.stream().filter(item -> item.isMultipleAllowed()).findFirst().orElseThrow();
-        assertEquals("Содержание", question.getText());
+        assertEquals("<script>alert(1)</script>", question.getText());
         assertEquals("0.6", question.getAnswers().get(0).getPointsText());
         mvc.perform(get("/management?section=questions").session(manager)).andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Импорт вопросов")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"_csrf\"")));
         mvc.perform(get("/management/questions/" + question.getId()).session(manager)).andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"title\"")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"text\"")));
 
         var invalid = new org.springframework.mock.web.MockMultipartFile("file", "questions.csv", "text/csv",
-                "Третий;Текст;Да;1;\n;;Нет;;\nЧетвёртый;Текст;Да;ошибка;\n".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                "Третий;Да;1;\n;Нет;;\nЧетвёртый;Да;ошибка;\n".getBytes(java.nio.charset.StandardCharsets.UTF_8));
         mvc.perform(multipart("/management/questions/import/preview").file(invalid).session(manager)
                         .header("X-CSRF-TOKEN", csrf(manager)))
                 .andExpect(status().isBadRequest())
@@ -232,5 +232,87 @@ class SecurityFlowTests {
                         .contentType("application/json")
                         .content("{\"email\":\"user@test.local\",\"password\":\"secret\"}"))
                 .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void testImportPreviewsWithoutSavingAndReusesOnlyOwnersQuestions() throws Exception {
+        var manager = login("manager@test.local");
+        Long ownerId = (Long) manager.getAttribute("userId");
+        var content = new StringBuilder("Тест импорта;Описание;10;\n");
+        for (int index = 1; index <= 3; index++) {
+            content.append("Вопрос ").append(index).append(";Да;1;\n;Нет;;\n");
+        }
+        var file = new org.springframework.mock.web.MockMultipartFile("file", "test.csv", "text/csv",
+                content.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        mvc.perform(multipart("/management/tests/import/preview").file(file).session(manager))
+                .andExpect(status().isForbidden());
+        mvc.perform(multipart("/management/tests/import/preview").file(file).session(manager)
+                        .header("X-CSRF-TOKEN", csrf(manager)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Тест импорта")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("name=\"userIds\"")));
+        assertTrue(management.questions(ownerId, false).isEmpty());
+        assertTrue(management.tests(ownerId, false).isEmpty());
+
+        for (int repeat = 0; repeat < 2; repeat++) {
+            mvc.perform(multipart("/management/tests/import").file(file).session(manager)
+                            .param("userIds", ownerId.toString()).header("X-CSRF-TOKEN", csrf(manager)))
+                    .andExpect(redirectedUrl("/management?section=tests"))
+                    .andExpect(flash().attribute("success", "Успешный импорт"));
+        }
+        assertEquals(3, management.questions(ownerId, false).size());
+        var tests = management.tests(ownerId, false);
+        assertEquals(2, tests.size());
+        var firstIds = tests.get(0).getQuestions().stream().map(question -> question.getId()).sorted().toList();
+        var secondIds = tests.get(1).getQuestions().stream().map(question -> question.getId()).sorted().toList();
+        assertEquals(firstIds, secondIds);
+        assertEquals(3, tests.get(0).getQuestions().size());
+        assertEquals(10, tests.get(0).getTimeMinutes());
+
+        mvc.perform(multipart("/management/tests/import").file(file).session(manager)
+                        .header("X-CSRF-TOKEN", csrf(manager)))
+                .andExpect(flash().attribute("success", "Успешный импорт"));
+        assertTrue(management.tests(ownerId, false).get(0).getTesters().isEmpty());
+        String managePath = "/management/tests/" + tests.get(0).getId();
+        mvc.perform(get(managePath + "/manage").session(manager)).andExpect(status().isOk());
+        mvc.perform(post(managePath + "/participants").session(manager)).andExpect(status().isForbidden());
+        mvc.perform(post(managePath + "/participants").session(manager).header("X-CSRF-TOKEN", csrf(manager)))
+                .andExpect(status().is3xxRedirection()).andExpect(flash().attribute("success", "Сохранено"));
+        assertTrue(tests.get(0).getTesters().isEmpty());
+
+        var importer = new ru.morkamo.enterprisetester.service.QuestionImportService();
+        var reordered = new org.springframework.mock.web.MockMultipartFile("file", "q.csv", "text/csv",
+                "Вопрос 1;Нет;0;\n;Да;1.00;\nВопрос 1;Да;1;\n;Нет;0;\n"
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        var resolved = management.importQuestions(importer.parse(reordered), ownerId);
+        assertEquals(1, resolved.size());
+        assertEquals(3, management.questions(ownerId, false).size());
+
+        var changed = new org.springframework.mock.web.MockMultipartFile("file", "q.csv", "text/csv",
+                "Вопрос 1;Да;2;\n;Нет;;\nВопрос 1;Да;1;1\n;Нет;;\n"
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        assertEquals(2, management.importQuestions(importer.parse(changed), ownerId).size());
+        assertEquals(5, management.questions(ownerId, false).size());
+
+        resolved.get(0).getImageNames().add("existing.png");
+        var withoutImage = management.importQuestions(importer.parse(reordered), ownerId);
+        assertNotEquals(resolved.get(0).getId(), withoutImage.get(0).getId());
+        assertEquals(6, management.questions(ownerId, false).size());
+
+        var admin = login("admin@test.local");
+        Long adminId = (Long) admin.getAttribute("userId");
+        var otherOwner = management.importQuestions(importer.parse(reordered), adminId);
+        assertNotEquals(resolved.get(0).getId(), otherOwner.get(0).getId());
+        mvc.perform(get("/management?section=questions").session(admin)).andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("[От: manager@test.local]")));
+        mvc.perform(get("/management/tests/new").session(admin)).andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("[От: admin@test.local]"))));
+
+        var account = users.findById(ownerId).orElseThrow();
+        account.setUsername("preferred.login");
+        assertEquals("[От: preferred.login]", management.questionOwners().get(ownerId));
+        account.setUsername(null);
+        account.setEmail(null);
+        assertEquals("[null]", management.questionOwners().get(ownerId));
     }
 }

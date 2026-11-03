@@ -15,7 +15,7 @@
    <span th:text="|${attempt.scoreText} из ${attempt.maxScoreText} баллов|"></span>
    <span th:text="|${attempt.percentage}%|"></span>
   </a>
-  <p th:if="${attempts.isEmpty()}">Нет завершённых попыток.</p>
+  <p th:if="${attempts.isEmpty()}">Нет попыток прохождения.</p>
  </div>
 </main>
 <dialog class="export-dialog" id="exportDialog">

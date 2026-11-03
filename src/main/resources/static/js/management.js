@@ -36,13 +36,14 @@ filters.forEach((filter) => {
     filter.addEventListener('change', filterUsers);
 });
 
-const importForm = document.getElementById('questionImportForm');
-if (importForm) {
-    const fileInput = document.getElementById('questionImportFile');
-    const importButton = document.getElementById('importQuestions');
-    const importError = document.getElementById('importError');
-    const dialog = document.getElementById('questionImportDialog');
-    const preview = document.getElementById('questionImportPreview');
+document.querySelectorAll('[data-import-kind]').forEach(importForm => {
+    const kind = importForm.dataset.importKind;
+    const fileInput = importForm.querySelector('input[type="file"]');
+    const importButton = importForm.querySelector('button');
+    const importError = document.getElementById(kind + 'ImportError');
+    const dialog = document.getElementById(kind + 'ImportDialog');
+    const preview = document.getElementById(kind + 'ImportPreview');
+    const applyButton = document.getElementById(kind + 'ApplyImport');
 
     importButton.addEventListener('click', () => {
         fileInput.value = '';
@@ -53,8 +54,9 @@ if (importForm) {
         if (!fileInput.files.length) return;
         importError.hidden = true;
         importButton.disabled = true;
+        applyButton.disabled = false;
         try {
-            const response = await fetch('/management/questions/import/preview', {
+            const response = await fetch(importForm.action + '/preview', {
                 method: 'POST',
                 body: new FormData(importForm)
             });
@@ -77,7 +79,11 @@ if (importForm) {
         }
     });
 
-    importForm.addEventListener('submit', () => {
-        document.getElementById('applyImport').disabled = true;
+    importForm.addEventListener('submit', event => {
+        if (kind === 'test' && !importForm.querySelector('input[type="file"]').files.length) {
+            event.preventDefault();
+            return;
+        }
+        applyButton.disabled = true;
     });
-}
+});

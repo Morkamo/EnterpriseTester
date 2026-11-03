@@ -94,7 +94,7 @@ public class TestService {
             attempt.setDeadline(attempt.getStartedAt().plusSeconds(minutes * 60L));
         }
 
-        for (var question : questions.subList(0, Math.min(questions.size(), settings.getDefaultQuestionsCount()))) {
+        for (var question : questions) {
             if (question.getAnswers().stream().noneMatch(Answer::isCorrect)) {
                 throw error(HttpStatus.CONFLICT, "У вопроса нет правильных вариантов ответа");
             }
@@ -124,6 +124,9 @@ public class TestService {
         var test = tests.findById(attempt.getTestId()).orElse(null);
         if (!attempt.isFinished() && (test == null || test.isTestClosed())) {
             throw error(HttpStatus.CONFLICT, "Тест завершён");
+        }
+        if (!attempt.isFinished() && test.getTesters().stream().noneMatch(user -> user.getId().equals(userId))) {
+            throw error(HttpStatus.CONFLICT, "Вы больше не являетесь участником теста");
         }
         if (!attempt.isFinished() && attempt.getDeadline() != null
                 && !Instant.now().isBefore(attempt.getDeadline())) {
@@ -165,6 +168,11 @@ public class TestService {
     }
 
     private void finish(TestAttempt attempt, Instant finishedAt) {
+        calculateResult(attempt);
+        attempt.setFinishedAt(finishedAt);
+    }
+
+    public void calculateResult(TestAttempt attempt) {
         int correctCount = 0;
         BigDecimal score = BigDecimal.ZERO;
         BigDecimal maxScore = BigDecimal.ZERO;
@@ -205,7 +213,6 @@ public class TestService {
         attempt.setMaxScore(maxScore);
         attempt.setPercentage(maxScore.signum() == 0 ? 0 : score.multiply(BigDecimal.valueOf(100))
                 .divide(maxScore, 2, RoundingMode.HALF_UP).doubleValue());
-        attempt.setFinishedAt(finishedAt);
     }
 
     public void finishExpiredAttempts() {

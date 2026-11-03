@@ -23,7 +23,8 @@ public class SessionService {
                 : users.findById(id).filter(account -> !account.isDeleted());
         var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         if (user.isEmpty() || (auth != null && auth.isAuthenticated()
-                && !auth.getName().equals(user.get().getEmail()))) {
+                && !auth.getName().equals(user.get().getEmail() != null
+                        ? user.get().getEmail() : user.get().getUsername()))) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
         return id;

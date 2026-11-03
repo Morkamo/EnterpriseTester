@@ -8,7 +8,6 @@
  <p class="error-message" th:if="${error}" th:text="${error}"></p>
  <form class="simple-form" th:action="@{/management/questions/save}" method="post" enctype="multipart/form-data">
   <input th:if="${question != null}" type="hidden" name="id" th:value="${question.id}">
-  <label>Заголовок (необязательно)<input name="title" maxlength="255" th:value="${question?.title}"></label>
   <label>Текст вопроса<textarea name="text" required th:text="${question?.text}"></textarea></label>
   <p>Изображения (до 10 PNG/JPEG, до 10 МБ каждое)</p>
   <button id="addImage" type="button" class="profile-button">Добавить изображение</button>

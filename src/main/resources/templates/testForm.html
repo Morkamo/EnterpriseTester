@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="/css/general.css?v=4">
     <link rel="stylesheet" href="/css/mainpage.css">
-    <link rel="stylesheet" href="/css/management.css?v=8">
+    <link rel="stylesheet" href="/css/management.css?v=9">
 </head>
 <body class="main-page">
 <header class="main-header">
@@ -36,8 +36,12 @@
             </div>
         </template>
         <div id="questionPicker" class="question-picker checkbox-list" popover aria-label="Выбор вопросов">
+            <button id="selectAllQuestions" type="button" class="profile-button">Выбрать все</button>
             <label class="checkbox-item" th:each="question : ${questions}">
-                <span th:text="${question.displayTitle}"></span>
+                <span>
+                    <span th:text="${question.text}"></span>
+                    <span th:if="${isAdmin and question.ownerId != currentUserId}" th:text="${questionOwners.get(question.ownerId) ?: '[null]'}"></span>
+                </span>
                 <input type="checkbox" name="questionIds" th:value="${question.id}">
             </label>
         </div>
@@ -55,13 +59,14 @@
         <h2>Назначить пользователям</h2>
         <div class="checkbox-list">
             <label class="checkbox-item" th:each="user : ${users}">
-                <span th:text="|${user.lastName} ${user.firstName} (${user.email})|"></span>
+                <span th:with="identifier=${user.email != null and !user.email.isBlank() ? user.email : user.username}"
+                      th:text="${user.lastName + ' ' + user.firstName + (identifier != null and !identifier.isBlank() ? ' (' + identifier + ')' : '')}"></span>
                 <input type="checkbox" name="userIds" th:value="${user.id}">
             </label>
         </div>
         <button class="profile-button">Создать тест</button>
     </form>
 </main>
-<script src="/js/testForm.js?v=6"></script>
+<script src="/js/testForm.js?v=8"></script>
 </body>
 </html>

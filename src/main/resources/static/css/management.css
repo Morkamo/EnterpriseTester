@@ -272,6 +272,12 @@
     border-bottom: 1px solid #eee;
 }
 
+.participant-selection > .profile-button {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+}
+
 .question-select-row {
     display: flex !important;
     flex-direction: row !important;
@@ -321,6 +327,13 @@
 
 .question-picker .checkbox-item {
     cursor: pointer;
+}
+
+.question-picker .profile-button {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 8px;
+    padding: 6px 12px;
 }
 
 .empty-list-message {

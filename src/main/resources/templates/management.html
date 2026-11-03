@@ -34,8 +34,23 @@
     <section th:if="${section == 'tests'}">
         <div class="section-title">
             <h1>Тесты</h1>
-            <a class="profile-button" href="/management/tests/new">Создать тест</a>
+            <div class="question-actions">
+                <form id="testImportForm" data-import-kind="test" th:action="@{/management/tests/import}" method="post" enctype="multipart/form-data">
+                    <input id="testImportFile" type="file" name="file" accept=".csv,text/csv" hidden>
+                    <button id="importTest" class="profile-button" type="button">Импортировать тест</button>
+                </form>
+                <a class="profile-button" href="/management/tests/new">Создать тест</a>
+            </div>
         </div>
+        <p id="testImportError" class="error-message" role="alert" hidden></p>
+        <dialog id="testImportDialog" class="import-dialog">
+            <div class="section-title">
+                <h2>Предпросмотр теста</h2>
+                <button class="negative-button" type="button" onclick="document.getElementById('testImportDialog').close()">Закрыть</button>
+            </div>
+            <div id="testImportPreview" class="import-preview"></div>
+            <button id="testApplyImport" class="profile-button" type="submit" form="testImportForm">Создать тест</button>
+        </dialog>
 
         <h2>Активные</h2>
         <div class="management-list">
@@ -45,8 +60,10 @@
                     <p th:text="${test.description}"></p>
                 </div>
                 <div class="item-actions">
+                    <a class="profile-button" th:href="@{/management/tests/{id}/manage(id=${test.id})}">Управление</a>
                     <a class="profile-button" th:if="${isAdmin}"
                        th:href="@{/management/tests/{id}/content(id=${test.id})}">Содержание</a>
+                    <a class="profile-button" th:href="@{/management/tests/{id}/statistics(id=${test.id})}">Статистика</a>
                     <form th:action="@{/management/tests/{id}/close(id=${test.id})}" method="post"
                           onsubmit="return confirm('Завершить этот тест?')">
                         <button class="negative-button">Завершить</button>
@@ -61,6 +78,7 @@
             <article class="management-item" th:each="test : ${tests}" th:if="${test.testClosed}">
                 <strong th:text="${test.name}"></strong>
                 <div class="item-actions">
+                    <a class="profile-button" th:href="@{/management/tests/{id}/manage(id=${test.id})}">Управление</a>
                     <a class="profile-button" th:if="${isAdmin}"
                        th:href="@{/management/tests/{id}/content(id=${test.id})}">Содержание</a>
                     <a class="profile-button" th:href="@{/management/tests/{id}/statistics(id=${test.id})}">Статистика</a>
@@ -72,28 +90,34 @@
 
     <section th:if="${section == 'questions'}">
         <div class="section-title">
-            <h1>Вопросы</h1>
+            <div>
+                <h1>Вопросы</h1>
+                <p th:text="|Всего: ${questions.size()}|"></p>
+            </div>
             <div class="question-actions">
-                <form id="questionImportForm" th:action="@{/management/questions/import}" method="post" enctype="multipart/form-data">
+                <form id="questionImportForm" data-import-kind="question" th:action="@{/management/questions/import}" method="post" enctype="multipart/form-data">
                     <input id="questionImportFile" type="file" name="file" accept=".csv,text/csv" hidden>
                     <button id="importQuestions" class="profile-button" type="button">Импорт вопросов</button>
                 </form>
                 <a class="profile-button" href="/management/questions/new">Создать вопрос</a>
             </div>
         </div>
-        <p id="importError" class="error-message" role="alert" hidden></p>
+        <p id="questionImportError" class="error-message" role="alert" hidden></p>
         <dialog id="questionImportDialog" class="import-dialog">
             <div class="section-title">
                 <h2>Предпросмотр импорта</h2>
                 <button class="negative-button" type="button" onclick="document.getElementById('questionImportDialog').close()">Закрыть</button>
             </div>
             <div id="questionImportPreview" class="import-preview"></div>
-            <button id="applyImport" class="profile-button" type="submit" form="questionImportForm">Применить</button>
+            <button id="questionApplyImport" class="profile-button" type="submit" form="questionImportForm">Применить</button>
         </dialog>
 
         <div class="management-list">
             <article class="management-item" th:each="question : ${questions}">
-                <span th:text="${question.displayTitle}"></span>
+                <span>
+                    <span th:text="${question.text}"></span>
+                    <span th:if="${isAdmin and question.ownerId != currentUserId}" th:text="${questionOwners.get(question.ownerId) ?: '[null]'}"></span>
+                </span>
                 <div class="item-actions">
                     <a class="profile-button" th:href="@{/management/questions/{id}(id=${question.id})}">Изменить</a>
                     <form th:action="@{/management/questions/{id}/delete(id=${question.id})}" method="post"
@@ -113,8 +137,8 @@
             <h2>Добавить пользователя</h2>
             <input name="firstName" placeholder="Имя" required>
             <input name="lastName" placeholder="Фамилия" required>
-            <input name="email" type="email" placeholder="Email" required>
-            <input name="username" placeholder="Имя пользователя (необязательно)" maxlength="32"
+            <input name="email" type="email" placeholder="Email">
+            <input name="username" placeholder="Имя пользователя" maxlength="32"
                    pattern="[A-Za-z0-9_.\-]{3,32}" title="3–32 символа: латинские буквы, цифры, точка, дефис, подчёркивание">
             <input name="password" type="password" placeholder="Пароль" autocomplete="new-password" required>
             <select name="roleId">
@@ -154,10 +178,10 @@
                 <input type="hidden" name="id" th:value="${user.id}">
                 <input name="firstName" th:value="${user.firstName}" required>
                 <input name="lastName" th:value="${user.lastName}" required>
-                <input name="email" type="email" th:value="${user.email}" required>
+                <input name="email" type="email" th:value="${user.email}" placeholder="Email">
                 <input name="username" th:value="${user.username}" placeholder="Имя пользователя" maxlength="32"
                        pattern="[A-Za-z0-9_.\-]{3,32}" title="3–32 символа: латинские буквы, цифры, точка, дефис, подчёркивание">
-                <input name="password" type="password" placeholder="Новый пароль (необязательно)" autocomplete="new-password">
+                <input name="password" type="password" placeholder="Новый пароль" autocomplete="new-password">
                 <select name="roleId">
                     <option value="1" th:selected="${user.userRole == 1}">Пользователь</option>
                     <option value="3" th:selected="${user.userRole == 3}">Менеджер</option>
@@ -172,6 +196,6 @@
     </section>
 </main>
 
-<script src="/js/management.js?v=3"></script>
+<script src="/js/management.js?v=5"></script>
 </body>
 </html>

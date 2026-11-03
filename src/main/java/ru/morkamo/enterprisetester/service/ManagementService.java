@@ -57,6 +57,20 @@ public class ManagementService {
         return users.findAllByOrderByLastNameAscFirstNameAsc();
     }
 
+    public Map<Long, String> questionOwners() {
+        var labels = new HashMap<Long, String>();
+        for (var user : users.findAll()) {
+            String label = "[null]";
+            if (user.getUsername() != null && !user.getUsername().isBlank()) {
+                label = "[От: " + user.getUsername() + "]";
+            } else if (user.getEmail() != null && !user.getEmail().isBlank()) {
+                label = "[От: " + user.getEmail() + "]";
+            }
+            labels.put(user.getId(), label);
+        }
+        return labels;
+    }
+
     public int minimumQuestionsCount() {
         return settings.getDefaultQuestionsCount();
     }
@@ -86,7 +100,9 @@ public class ManagementService {
         }
         var question = id == null ? new Question() : question(id, ownerId, admin);
         if (id == null) question.setOwnerId(ownerId);
-        question.setTitle(title == null || title.isBlank() ? null : title.trim());
+        if (title != null) {
+            question.setTitle(title.trim());
+        }
         question.setText(text.trim());
         question.setMultipleAllowed(multiple);
         question.getAnswers().clear();
@@ -126,9 +142,70 @@ public class ManagementService {
         return questions.save(question);
     }
 
-    public void importQuestions(List<Question> imported, Long ownerId) {
-        imported.forEach(question -> question.setOwnerId(ownerId));
-        questions.saveAll(imported);
+    public List<Question> previewQuestions(List<Question> imported, Long ownerId) {
+        var existing = new HashMap<QuestionKey, Question>();
+        for (var question : questions.findByOwnerIdOrderByIdDesc(ownerId)) {
+            existing.putIfAbsent(questionKey(question), question);
+        }
+        var result = new LinkedHashMap<QuestionKey, Question>();
+        for (var question : imported) {
+            var key = questionKey(question);
+            result.putIfAbsent(key, existing.getOrDefault(key, question));
+        }
+        return new ArrayList<>(result.values());
+    }
+
+    public List<Question> importQuestions(List<Question> imported, Long ownerId) {
+        users.findByIdForUpdate(ownerId).filter(user -> !user.isDeleted()).orElseThrow(this::forbidden);
+        var resolved = previewQuestions(imported, ownerId);
+        for (var question : resolved) {
+            if (question.getId() == null) {
+                question.setOwnerId(ownerId);
+                questions.save(question);
+            }
+        }
+        return resolved;
+    }
+
+    public void previewTest(TestDefinition test, Long ownerId) {
+        test.setQuestions(previewQuestions(test.getQuestions(), ownerId));
+        if (test.getQuestions().size() < minimumQuestionsCount() || minimumQuestionsCount() < 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "В тесте должно быть не меньше " + minimumQuestionsCount() + " различных вопросов");
+        }
+        if (test.isTemporaryTest() && !settings.isEnableTimeLimit()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Создание временных тестов отключено");
+        }
+    }
+
+    public TestDefinition importTest(TestDefinition test, List<Long> userIds, Long ownerId, boolean admin) {
+        var resolved = importQuestions(test.getQuestions(), ownerId);
+        var ids = resolved.stream().map(Question::getId).toList();
+        String minutes = "";
+        if (test.getTimeMinutes() != null) minutes = test.getTimeMinutes().toString();
+        return createTest(test.getName(), test.getDescription(), test.isTemporaryTest(), minutes,
+                ids, userIds, ownerId, admin);
+    }
+
+    private QuestionKey questionKey(Question question) {
+        var answers = question.getAnswers().stream()
+                .map(answer -> new AnswerKey(normalizeText(answer.getText()),
+                        answer.getPoints().stripTrailingZeros().toPlainString(), answer.isCorrect()))
+                .sorted(Comparator.comparing(AnswerKey::text).thenComparing(AnswerKey::points)
+                        .thenComparing(AnswerKey::correct))
+                .toList();
+        return new QuestionKey(normalizeText(question.getText()), question.isMultipleAllowed(),
+                answers, List.copyOf(question.getImageNames()));
+    }
+
+    private String normalizeText(String text) {
+        return text.replace("\r\n", "\n").replace('\r', '\n').strip();
+    }
+
+    private record AnswerKey(String text, String points, boolean correct) {
+    }
+
+    private record QuestionKey(String text, boolean multiple, List<AnswerKey> answers, List<String> images) {
     }
 
     public void deleteQuestion(Long id, Long ownerId, boolean admin) {
@@ -155,9 +232,6 @@ public class ManagementService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Один вопрос нельзя добавлять несколько раз");
         }
-        if (userIds == null || userIds.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Назначьте пользователей");
-        }
         if (timed && !settings.isEnableTimeLimit()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Создание временных тестов отключено");
@@ -173,12 +247,36 @@ public class ManagementService {
         test.setTemporaryTest(timed);
         test.setTimeMinutes(timed ? minutes : null);
         test.setQuestions(new ArrayList<>(questions.findAllById(uniqueQuestionIds)));
-        var assignedUsers = users.findAllById(userIds).stream().filter(user -> !user.isDeleted()).toList();
-        if (assignedUsers.size() != new HashSet<>(userIds).size()) {
+        test.setTesters(assignedUsers(userIds));
+        return tests.save(test);
+    }
+
+    public Map<Long, TestAttempt> participantAttempts(Long testId, Long ownerId, boolean admin) {
+        accessibleTest(testId, ownerId, admin);
+        var result = new HashMap<Long, TestAttempt>();
+        for (var attempt : attempts.findByTestIdOrderByStartedAtDesc(testId)) {
+            result.putIfAbsent(attempt.getUserId(), attempt);
+        }
+        return result;
+    }
+
+    public void saveParticipants(Long testId, List<Long> userIds, Long ownerId, boolean admin) {
+        var test = accessibleTest(testId, ownerId, admin);
+        if (test.isTestClosed()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Тест завершён");
+        }
+        var assigned = assignedUsers(userIds);
+        test.getTesters().clear();
+        test.getTesters().addAll(assigned);
+    }
+
+    private List<User> assignedUsers(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) return new ArrayList<>();
+        var assigned = users.findAllById(userIds).stream().filter(user -> !user.isDeleted()).toList();
+        if (assigned.size() != new HashSet<>(userIds).size()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Выберите действующих пользователей");
         }
-        test.setTesters(new ArrayList<>(assignedUsers));
-        return tests.save(test);
+        return new ArrayList<>(assigned);
     }
 
     public void closeTest(Long id, Long ownerId, boolean admin) {
@@ -200,36 +298,51 @@ public class ManagementService {
     }
 
     public List<TestAttempt> statistics(Long testId, Long ownerId, boolean admin) {
-        var test = accessibleTest(testId, ownerId, admin);
-        if (!test.isTestClosed()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Сначала завершите тест");
-        }
-        testService.finishOpenAttempts(testId, java.time.Instant.now());
-        return attempts.findByTestIdAndFinishedAtIsNotNullOrderByFinishedAtDesc(testId);
+        accessibleTest(testId, ownerId, admin);
+        var results = attempts.findByTestIdOrderByStartedAtDesc(testId);
+        results.forEach(this::prepareStatistics);
+        return results;
     }
 
     public TestAttempt statisticAttempt(Long testId, Long attemptId, Long ownerId, boolean admin) {
         accessibleTest(testId, ownerId, admin);
         var attempt = attempts.findById(attemptId).orElseThrow(() -> notFound("Результат не найден"));
         if (!Objects.equals(attempt.getTestId(), testId)) throw forbidden();
-        attempt.getQuestions().forEach(question -> question.getOptions().size());
+        prepareStatistics(attempt);
         return attempt;
+    }
+
+    private void prepareStatistics(TestAttempt attempt) {
+        attempt.getQuestions().forEach(question -> {
+            question.getOptions().size();
+            question.getImageNames().size();
+        });
+        if (!attempt.isFinished()) {
+            entityManager.detach(attempt);
+            testService.calculateResult(attempt);
+        }
     }
 
     public User saveUser(Long id, String firstName, String lastName, String email, String username,
                          String password, Long roleId) {
-        if (firstName.isBlank() || lastName.isBlank() || email.isBlank()
+        String emailAddress = email == null || email.isBlank() ? null : email.trim();
+        String loginName = username == null || username.isBlank() ? null : username.trim().toLowerCase(Locale.ROOT);
+        if (firstName.isBlank() || lastName.isBlank()
                 || (id == null && (password == null || password.isBlank()))) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Заполните все поля");
+        }
+        if (emailAddress == null && loginName == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Укажите email или имя пользователя");
         }
         if (!Set.of(SessionService.USER, SessionService.ADMIN, SessionService.MANAGER).contains(roleId)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Неверная роль");
         }
-        var duplicate = users.findByEmail(email);
-        if (duplicate.isPresent() && !Objects.equals(duplicate.get().getId(), id)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email уже используется");
+        if (emailAddress != null) {
+            var duplicate = users.findByEmail(emailAddress);
+            if (duplicate.isPresent() && !Objects.equals(duplicate.get().getId(), id)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email уже используется");
+            }
         }
-        String loginName = username == null || username.isBlank() ? null : username.trim().toLowerCase(Locale.ROOT);
         if (loginName != null) {
             if (!loginName.matches("[a-z0-9_.-]{3,32}")) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -245,7 +358,7 @@ public class ManagementService {
                 .orElseThrow(() -> notFound("Пользователь не найден"));
         user.setFirstName(firstName.trim());
         user.setLastName(lastName.trim());
-        user.setEmail(email.trim());
+        user.setEmail(emailAddress);
         user.setUsername(loginName);
         if (password != null && !password.isBlank()) user.setPassword(passwords.encode(password));
         user.setUserRole(roleId);

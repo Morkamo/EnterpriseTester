@@ -21,7 +21,6 @@
     <div class="test-content-scroll">
         <article class="test-content-question" th:each="question, index : ${test.questions}">
             <h2 th:text="|Вопрос ${index.count}|"></h2>
-            <h3 th:if="${question.title != null}" th:text="${question.title}"></h3>
             <p class="content-question-text" th:text="${question.text}"></p>
             <div class="question-images">
                 <img class="question-image" th:each="imageName, imageIndex : ${question.imageNames}"

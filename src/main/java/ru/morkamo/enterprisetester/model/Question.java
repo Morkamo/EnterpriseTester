@@ -27,6 +27,6 @@ public class Question {
     private List<Answer> answers = new ArrayList<>();
 
     public String getDisplayTitle() {
-        return title == null || title.isBlank() ? text : title;
+        return text;
     }
 }

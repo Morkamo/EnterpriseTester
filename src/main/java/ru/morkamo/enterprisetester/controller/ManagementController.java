@@ -43,7 +43,10 @@ public class ManagementController {
         model.addAttribute("section", section);
         model.addAttribute("tests", management.tests(sessions.userId(session), sessions.isAdmin(session)));
         model.addAttribute("questions", management.questions(sessions.userId(session), sessions.isAdmin(session)));
-        if (sessions.isAdmin(session)) model.addAttribute("users", management.users());
+        if (sessions.isAdmin(session)) {
+            model.addAttribute("users", management.users());
+            model.addAttribute("questionOwners", management.questionOwners());
+        }
         return "management";
     }
 
@@ -91,7 +94,8 @@ public class ManagementController {
             model.addAttribute("error", "Нет доступа к импорту вопросов");
         } else {
             try {
-                model.addAttribute("questions", questionImport.parse(file));
+                var imported = questionImport.parse(file);
+                model.addAttribute("questions", management.previewQuestions(imported, sessions.userId(session)));
             } catch (org.springframework.web.server.ResponseStatusException error) {
                 response.setStatus(error.getStatusCode().value());
                 model.addAttribute("error", error.getReason());
@@ -107,7 +111,7 @@ public class ManagementController {
         try {
             var questions = questionImport.parse(file);
             management.importQuestions(questions, sessions.userId(session));
-            redirect.addFlashAttribute("success", "Импортировано вопросов: " + questions.size());
+            redirect.addFlashAttribute("success", "Успешный импорт");
         } catch (org.springframework.web.server.ResponseStatusException error) {
             redirect.addFlashAttribute("error", error.getReason());
         }
@@ -138,7 +142,44 @@ public class ManagementController {
         model.addAttribute("users", management.users());
         model.addAttribute("defaultQuestionsCount", management.minimumQuestionsCount());
         model.addAttribute("timeLimitEnabled", management.isTimeLimitEnabled());
+        if (sessions.isAdmin(session)) model.addAttribute("questionOwners", management.questionOwners());
         return "testForm";
+    }
+
+    @PostMapping("/tests/import/preview")
+    public String previewTest(@RequestParam org.springframework.web.multipart.MultipartFile file,
+                              HttpSession session, Model model, jakarta.servlet.http.HttpServletResponse response) {
+        if (!sessions.canManage(session)) {
+            response.setStatus(HttpStatus.FORBIDDEN.value());
+            model.addAttribute("error", "Нет доступа к импорту тестов");
+        } else {
+            try {
+                var test = questionImport.parseTest(file);
+                management.previewTest(test, sessions.userId(session));
+                model.addAttribute("test", test);
+                model.addAttribute("questions", test.getQuestions());
+                model.addAttribute("users", management.users());
+            } catch (org.springframework.web.server.ResponseStatusException error) {
+                response.setStatus(error.getStatusCode().value());
+                model.addAttribute("error", error.getReason());
+            }
+        }
+        return "testImport";
+    }
+
+    @PostMapping("/tests/import")
+    public String importTest(@RequestParam org.springframework.web.multipart.MultipartFile file,
+                             @RequestParam(required = false) List<Long> userIds,
+                             HttpSession session, RedirectAttributes redirect) {
+        if (!sessions.canManage(session)) return "redirect:/mainpage";
+        try {
+            var test = questionImport.parseTest(file);
+            management.importTest(test, userIds, sessions.userId(session), sessions.isAdmin(session));
+            redirect.addFlashAttribute("success", "Успешный импорт");
+        } catch (org.springframework.web.server.ResponseStatusException error) {
+            redirect.addFlashAttribute("error", error.getReason());
+        }
+        return "redirect:/management?section=tests";
     }
 
     @PostMapping("/tests/create")
@@ -164,6 +205,33 @@ public class ManagementController {
         if (!sessions.canManage(session)) return "redirect:/mainpage";
         management.closeTest(id, sessions.userId(session), sessions.isAdmin(session));
         return "redirect:/management";
+    }
+
+    @GetMapping("/tests/{id}/manage")
+    public String manageTest(@PathVariable Long id, HttpSession session, Model model) {
+        if (!sessions.canManage(session)) return "redirect:/mainpage";
+        var test = management.accessibleTest(id, sessions.userId(session), sessions.isAdmin(session));
+        header(session, model);
+        model.addAttribute("test", test);
+        model.addAttribute("users", management.users());
+        model.addAttribute("assignedIds", test.getTesters().stream().map(user -> user.getId()).toList());
+        model.addAttribute("attempts", management.participantAttempts(id, sessions.userId(session), sessions.isAdmin(session)));
+        model.addAttribute("serverNow", java.time.Instant.now().toEpochMilli());
+        return "testManagement";
+    }
+
+    @PostMapping("/tests/{id}/participants")
+    public String saveParticipants(@PathVariable Long id, @RequestParam(required = false) List<Long> userIds,
+                                   HttpSession session, RedirectAttributes redirect) {
+        if (!sessions.canManage(session)) return "redirect:/mainpage";
+        management.accessibleTest(id, sessions.userId(session), sessions.isAdmin(session));
+        try {
+            management.saveParticipants(id, userIds, sessions.userId(session), sessions.isAdmin(session));
+            redirect.addFlashAttribute("success", "Сохранено");
+        } catch (org.springframework.web.server.ResponseStatusException error) {
+            redirect.addFlashAttribute("error", error.getReason());
+        }
+        return "redirect:/management/tests/" + id + "/manage";
     }
 
     @GetMapping("/tests/{id}/statistics")
@@ -254,7 +322,7 @@ public class ManagementController {
     @PostMapping("/users/save")
     public String saveUser(@RequestParam(required = false) Long id,
                            @RequestParam String firstName, @RequestParam String lastName,
-                           @RequestParam String email, @RequestParam String password,
+                           @RequestParam(required = false) String email, @RequestParam String password,
                            @RequestParam(required = false) String username,
                            @RequestParam Long roleId, HttpSession session,
                            RedirectAttributes redirect) {
@@ -281,5 +349,6 @@ public class ManagementController {
 
     private void header(HttpSession session, Model model) {
         sessions.addHeader(session, model);
+        model.addAttribute("currentUserId", sessions.userId(session));
     }
 }

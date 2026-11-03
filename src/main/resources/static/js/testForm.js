@@ -7,6 +7,18 @@ const questionRows = document.getElementById('questionRows');
 const questionRowTemplate = document.getElementById('questionRowTemplate');
 const questionPicker = document.getElementById('questionPicker');
 
+document.getElementById('selectAllQuestions').addEventListener('click', () => {
+    const checkboxes = Array.from(questionPicker.querySelectorAll('[name="questionIds"]:enabled'));
+    const selectAll = checkboxes.some(checkbox => !checkbox.checked);
+
+    checkboxes.forEach(checkbox => {
+        if (checkbox.checked === selectAll) return;
+
+        checkbox.checked = selectAll;
+        checkbox.dispatchEvent(new Event('change', {bubbles: true}));
+    });
+});
+
 questionPicker.addEventListener('change', event => {
     const checkbox = event.target;
     const existing = questionRows.querySelector('[data-question-id="' + checkbox.value + '"]');

@@ -37,7 +37,7 @@ public class StatisticsExportService {
                     String.valueOf(attempt.getQuestions().size()),
                     String.valueOf(attempt.getPercentage()),
                     csvValue(DATE_FORMAT.format(attempt.getStartedAt())),
-                    csvValue(DATE_FORMAT.format(attempt.getFinishedAt())),
+                    csvValue(attempt.getFinishedAt() == null ? "" : DATE_FORMAT.format(attempt.getFinishedAt())),
                     csvValue(durationText(attempt))));
             csv.append("\r\n");
         }
@@ -97,7 +97,9 @@ public class StatisticsExportService {
         started.setCellStyle(dateStyle);
 
         var finished = row.createCell(6);
-        finished.setCellValue(java.util.Date.from(attempt.getFinishedAt()));
+        if (attempt.getFinishedAt() != null) {
+            finished.setCellValue(java.util.Date.from(attempt.getFinishedAt()));
+        }
         finished.setCellStyle(dateStyle);
 
         var duration = row.createCell(7);
@@ -129,7 +131,8 @@ public class StatisticsExportService {
     }
 
     private Duration duration(TestAttempt attempt) {
-        return Duration.between(attempt.getStartedAt(), attempt.getFinishedAt());
+        return Duration.between(attempt.getStartedAt(),
+                attempt.getFinishedAt() == null ? java.time.Instant.now() : attempt.getFinishedAt());
     }
 
     private String durationText(TestAttempt attempt) {
